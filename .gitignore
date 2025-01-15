@@ -1,0 +1,81 @@
+# ─── Environment ────────────────────────────────────────────────────────────────
+.env
+.venv/
+venv/
+env/
+ENV/
+
+# ─── Python ─────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# ─── Testing ────────────────────────────────────────────────────────────────────
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# ─── IDE ────────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ─── Logs ───────────────────────────────────────────────────────────────────────
+logs/*
+*.log
+!logs/.gitkeep
+
+# ─── Model Files (too large for git) ────────────────────────────────────────────
+*.pkl
+*.joblib
+*.pt
+*.pth
+*.bin
+*.onnx
+*.h5
+*.parquet
+
+# ─── Data (keep directory structure) ────────────────────────────────────────────
+data/raw/*
+data/downloads/*
+data/processed/*
+data/features/*
+!data/raw/.gitkeep
+!data/raw/sample_emails.csv
+!data/processed/.gitkeep
+!data/features/.gitkeep
+!data/downloads/.gitkeep
+
+# ─── Results (keep directory structure) ─────────────────────────────────────────
+results/models/*
+results/plots/*
+results/predictions/*
+!results/models/.gitkeep
+!results/plots/.gitkeep
+!results/predictions/.gitkeep
+!results/metrics/
+
+# ─── Node/Extension Build ──────────────────────────────────────────────────────
+node_modules/
+
+# ─── Archives & Outputs ────────────────────────────────────────────────────────
+*.zip
+outputs/
+
+# ─── Misc ───────────────────────────────────────────────────────────────────────
+.claude/
+Pipfile.lock
+.mypy_cache/
+.dmypy.json
