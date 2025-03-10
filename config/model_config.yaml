@@ -1,0 +1,296 @@
+# Model-Specific Hyperparameter Configuration
+
+# ============================================================================
+# BASELINE MODELS
+# ============================================================================
+baseline_models:
+  tfidf_logreg:
+    model_name: "TF-IDF + Logistic Regression"
+    purpose: "Baseline text-only model"
+    
+    tfidf:
+      max_features: 5000
+      ngram_range: [1, 2]
+      lowercase: true
+      stop_words: "english"
+      min_df: 2
+      max_df: 0.95
+      sublinear_tf: true
+    
+    logistic_regression:
+      C: 1.0
+      penalty: "l2"
+      solver: "lbfgs"
+      max_iter: 1000
+      random_state: 42
+      class_weight: "balanced"
+    
+    hyperparameter_search:
+      C: [0.001, 0.01, 0.1, 1, 10]
+      penalty: ["l2"]
+      solver: ["lbfgs", "liblinear"]
+  
+  tfidf_rf:
+    model_name: "TF-IDF + Random Forest"
+    purpose: "Baseline with ensemble learning"
+    
+    tfidf:
+      max_features: 5000
+      ngram_range: [1, 2]
+      lowercase: true
+      stop_words: "english"
+      min_df: 2
+      max_df: 0.95
+    
+    random_forest:
+      n_estimators: 100
+      max_depth: 20
+      min_samples_split: 5
+      min_samples_leaf: 2
+      max_features: "sqrt"
+      random_state: 42
+      n_jobs: -1
+      class_weight: "balanced"
+    
+    hyperparameter_search:
+      n_estimators: [50, 100, 200]
+      max_depth: [10, 15, 20, None]
+      min_samples_leaf: [1, 2, 4]
+
+# ============================================================================
+# UPGRADED TEXT BRANCH - MODERNBERT
+# ============================================================================
+upgraded_models:
+  modernbert_text:
+    model_name: "ModernBERT Text Classifier"
+    purpose: "Semantic text analysis with transformer"
+    
+    encoder:
+      model_id: "answerdotai/ModernBERT-base"
+      hidden_size: 768
+      output_hidden_states: false
+      max_length: 512
+      truncation: true
+      padding: true
+    
+    classification_head:
+      dropout_rate: 0.2
+      hidden_dim: 256
+      activation: "relu"
+      output_dim: 1
+      output_activation: "sigmoid"
+    
+    training:
+      learning_rate: 2e-5
+      optimizer: "AdamW"
+      epochs: 3
+      batch_size: 32
+      gradient_accumulation_steps: 1
+      warmup_steps: 500
+      weight_decay: 0.01
+      max_grad_norm: 1.0
+      early_stopping_patience: 2
+      early_stopping_metric: "val_f1"
+    
+    data_augmentation:
+      use_augmentation: false
+      paraphrase_prob: 0.0
+  
+  distilbert_fallback:
+    model_name: "DistilBERT Text Classifier"
+    purpose: "Lighter fallback with 97% BERT performance"
+    
+    encoder:
+      model_id: "distilbert-base-uncased"
+      hidden_size: 768
+      max_length: 512
+    
+    training:
+      learning_rate: 2e-5
+      epochs: 3
+      batch_size: 64
+      early_stopping_patience: 2
+  
+  mobilebert_edge:
+    model_name: "MobileBERT Classifier"
+    purpose: "Ultra-light edge deployment"
+    
+    encoder:
+      model_id: "google/mobilebert-uncased"
+      hidden_size: 256
+      max_length: 128
+    
+    training:
+      learning_rate: 5e-5
+      epochs: 5
+      batch_size: 128
+
+# ============================================================================
+# UPGRADED STRUCTURAL BRANCH - LIGHTGBM
+# ============================================================================
+  lightgbm_structural:
+    model_name: "LightGBM Structural Classifier"
+    purpose: "Fast gradient boosting on engineered features"
+    
+    objective: "binary"
+    metric: "binary_error"
+    
+    parameters:
+      num_leaves: 31
+      learning_rate: 0.05
+      feature_fraction: 0.8
+      bagging_fraction: 0.8
+      bagging_freq: 5
+      verbose: -1
+      seed: 42
+      n_jobs: -1
+    
+    training:
+      num_boost_round: 100
+      early_stopping_rounds: 10
+      valid_sets: ["validation"]
+      verbose_eval: 10
+    
+    hyperparameter_search:
+      num_leaves: [15, 31, 63]
+      learning_rate: [0.01, 0.05, 0.1]
+      feature_fraction: [0.6, 0.8, 1.0]
+      bagging_fraction: [0.6, 0.8, 1.0]
+  
+  random_forest_structural:
+    model_name: "Random Forest Structural Classifier"
+    purpose: "Fallback structural model"
+    
+    n_estimators: 100
+    max_depth: 15
+    min_samples_split: 5
+    min_samples_leaf: 2
+    max_features: "sqrt"
+    random_state: 42
+    n_jobs: -1
+
+# ============================================================================
+# FUSION STRATEGIES
+# ============================================================================
+fusion:
+  late_fusion:
+    strategy: "weighted_probability_combination"
+    weight_learning:
+      method: "optimization"
+      optimizer: "scipy.minimize"
+      bounds: [[0, 1], [0, 1]]
+      constraint: "weights_sum_to_one"
+    initial_weights:
+      text: 0.5
+      structural: 0.5
+    
+    confidence_weighting:
+      use_adaptive: true
+      short_email_threshold: 50
+      short_email_struct_boost: 1.3
+      short_email_text_reduce: 0.7
+  
+  stacking:
+    strategy: "meta_learner_fusion"
+    
+    base_learners:
+      - type: "text"
+        model: "modernbert_text"
+      - type: "structural"
+        model: "lightgbm_structural"
+    
+    meta_learner:
+      model: "logistic_regression"
+      C: 1.0
+      penalty: "l2"
+      solver: "lbfgs"
+      max_iter: 1000
+    
+    training:
+      validation_set_size: 0.2
+      random_state: 42
+  
+  early_fusion:
+    strategy: "concatenation"
+    fusion_points: ["embedding"]
+    description: "Not recommended - see design document"
+
+# ============================================================================
+# EXPLAINABILITY
+# ============================================================================
+explainability:
+  shap:
+    enable: true
+    explainer_type: "TreeExplainer"  # For LightGBM
+    num_background_samples: 1000
+    max_display: 5
+  
+  lime:
+    enable: true
+    num_samples: 1000
+    num_features: 10
+    kernel_width: 0.25
+  
+  token_attribution:
+    enable: true
+    method: "gradient_based"
+  
+  reason_generation:
+    enable: true
+    max_reasons: 3
+    min_importance: 0.05
+
+# ============================================================================
+# INFERENCE
+# ============================================================================
+inference:
+  batch_processing: true
+  batch_size: 32
+  use_gpu: true
+  enable_caching: true
+  cache_max_size: 10000
+  
+  thresholding:
+    decision_threshold: 0.5
+    confidence_threshold: 0.3  # Only output if confidence above this
+    
+    precision_mode: true  # Optimize for precision (fewer false positives)
+    recall_mode: false    # Optimize for recall (catch more phishing)
+    
+    custom_thresholds:
+      precision_optimized: 0.65
+      recall_optimized: 0.35
+
+# ============================================================================
+# EVALUATION METRICS
+# ============================================================================
+evaluation:
+  metrics_to_track:
+    - "accuracy"
+    - "precision"
+    - "recall"
+    - "f1"
+    - "roc_auc"
+    - "pr_auc"
+    - "tnr"  # True Negative Rate (Specificity)
+    - "fnr"  # False Negative Rate
+  
+  per_class_metrics: true
+  
+  ablation_study:
+    enable: true
+    configs:
+      - name: "text_only"
+        text: true
+        structural: false
+      - name: "structural_only"
+        text: false
+        structural: true
+      - name: "late_fusion"
+        text: true
+        structural: true
+        fusion: "late_fusion"
+      - name: "stacking_fusion"
+        text: true
+        structural: true
+        fusion: "stacking"

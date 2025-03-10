@@ -1,0 +1,418 @@
+# Feature Engineering Configuration
+
+# ============================================================================
+# TEXT FEATURES
+# ============================================================================
+text_features:
+  tfidf_vectorization:
+    enabled: true
+    max_features: 5000
+    ngram_range: [1, 2]  # Unigrams and bigrams
+    lowercase: true
+    stop_words: "english"
+    min_df: 2
+    max_df: 0.95
+    sublinear_tf: true
+    output_dimension: 5000
+  
+  urgency_intent_features:
+    enabled: true
+    output_dimension: 5
+    
+    urgency_keywords:
+      - "urgent"
+      - "immediate"
+      - "action required"
+      - "asap"
+      - "immediately"
+      - "quickly"
+      - "now"
+    
+    credential_keywords:
+      - "password"
+      - "login"
+      - "credentials"
+      - "username"
+      - "authenticate"
+      - "verify"
+      - "confirm"
+      - "email"
+      - "account"
+    
+    action_cta_keywords:
+      - "click"
+      - "click here"
+      - "tap"
+      - "open"
+      - "download"
+      - "update"
+      - "proceed"
+      - "start"
+    
+    threat_keywords:
+      - "suspend"
+      - "block"
+      - "limited"
+      - "locked"
+      - "risk"
+      - "violation"
+      - "unauthorized"
+      - "problem"
+      - "issue"
+    
+    legitimacy_keywords:
+      - "regards"
+      - "sincerely"
+      - "thank you"
+      - "appreciate"
+      - "best"
+      - "warmly"
+      - "professional"
+  
+  subject_analysis:
+    enabled: true
+    output_dimension: 3
+    
+    features:
+      - subject_length
+      - subject_urgency_score
+      - subject_word_count
+  
+  embedding_features:
+    enabled: true
+    output_dimension: 768
+    
+    primary_encoder: "answerdotai/ModernBERT-base"
+    fallback_encoder: "distilbert-base-uncased"
+    edge_encoder: "google/mobilebert-uncased"
+    
+    max_length: 512
+    pooling: "cls_token"  # Use [CLS] token representation
+    normalize: true
+  
+  total_text_features: 5776  # 5K TF-IDF + 5 urgency + 3 subject + 768 embeddings
+
+# ============================================================================
+# STRUCTURAL FEATURES (45 TOTAL)
+# ============================================================================
+structural_features:
+  
+  # URL Features (15)
+  url_features:
+    enabled: true
+    count: 15
+    
+    basic_url_metrics:
+      - name: "url_count"
+        description: "Total number of URLs in email"
+        type: "integer"
+      
+      - name: "max_url_length"
+        description: "Length of longest URL"
+        type: "integer"
+      
+      - name: "avg_url_length"
+        description: "Average URL length"
+        type: "float"
+      
+      - name: "min_url_length"
+        description: "Length of shortest URL"
+        type: "integer"
+      
+      - name: "url_length_std_dev"
+        description: "Standard deviation of URL lengths"
+        type: "float"
+    
+    url_characteristics:
+      - name: "subdomain_depth"
+        description: "Maximum subdomain nesting level"
+        type: "integer"
+        example: "a.b.c.com has depth 2"
+      
+      - name: "max_domain_digit_ratio"
+        description: "Highest digit ratio in any domain"
+        type: "float"
+        range: [0, 1]
+      
+      - name: "max_url_special_ratio"
+        description: "Highest special character ratio in any URL"
+        type: "float"
+        range: [0, 1]
+    
+    url_anomalies:
+      - name: "has_shortened_url"
+        description: "Presence of known shortened URL service"
+        type: "boolean"
+        shortened_domains:
+          - "bit.ly"
+          - "tinyurl.com"
+          - "goo.gl"
+          - "t.co"
+          - "ow.ly"
+          - "short.link"
+      
+      - name: "has_percent_encoding"
+        description: "Presence of percent-encoded characters (%XX)"
+        type: "boolean"
+        risk_level: "high"
+      
+      - name: "has_base64_token"
+        description: "Presence of base64-like strings in URL"
+        type: "boolean"
+        pattern: "[A-Za-z0-9+/]{20,}={0,2}"
+        risk_level: "high"
+      
+      - name: "has_punycode"
+        description: "Presence of punycode/IDN encoding (xn--)"
+        type: "boolean"
+        risk_level: "medium"
+        note: "Can masquerade as legitimate domain"
+      
+      - name: "has_ip_address"
+        description: "URL uses IP address instead of domain"
+        type: "boolean"
+        risk_level: "high"
+      
+      - name: "has_redirect_pattern"
+        description: "Multiple slashes indicating redirect (//)"
+        type: "boolean"
+        risk_level: "medium"
+      
+      - name: "has_suspicious_tld"
+        description: "Domain uses suspicious top-level domain"
+        type: "boolean"
+        suspicious_tlds:
+          - ".ru"
+          - ".cn"
+          - ".tk"
+          - ".ml"
+          - ".ga"
+          - ".cf"
+        risk_level: "medium"
+  
+  # Domain Features (12)
+  domain_features:
+    enabled: true
+    count: 12
+    
+    domain_metadata:
+      - name: "domain_age_days"
+        description: "Age of domain in days (0 = unknown)"
+        type: "integer"
+        note: "Requires WHOIS API integration"
+      
+      - name: "domain_reputation"
+        description: "Domain reputation score (0-1)"
+        type: "float"
+        note: "Requires external API (SecurityTrails, abuse.ch)"
+      
+      - name: "is_mx_record_valid"
+        description: "Domain has valid MX records"
+        type: "boolean"
+      
+      - name: "is_spf_valid"
+        description: "Sender has SPF record"
+        type: "boolean"
+    
+    sender_validation:
+      - name: "from_reply_mismatch"
+        description: "From domain ≠ Reply-To domain"
+        type: "boolean"
+        risk_level: "high"
+      
+      - name: "from_return_mismatch"
+        description: "From domain ≠ Return-Path domain"
+        type: "boolean"
+        risk_level: "medium"
+      
+      - name: "sender_domain_mismatch"
+        description: "Sender impersonating different company"
+        type: "boolean"
+        risk_level: "high"
+      
+      - name: "sender_has_phone"
+        description: "Sender field contains phone number"
+        type: "boolean"
+        risk_level: "low"
+      
+      - name: "sender_has_website"
+        description: "Sender field contains website URL"
+        type: "boolean"
+        risk_level: "low"
+      
+      - name: "sender_domain_typo"
+        description: "Sender domain is typo of known company"
+        type: "boolean"
+        risk_level: "high"
+        note: "Requires company domain lookup"
+  
+  # Header Features (10)
+  header_features:
+    enabled: true
+    count: 10
+    
+    authentication_headers:
+      - name: "has_spf"
+        description: "Email has SPF authentication"
+        type: "boolean"
+      
+      - name: "has_dkim"
+        description: "Email has DKIM signature"
+        type: "boolean"
+      
+      - name: "has_dmarc"
+        description: "Email has DMARC policy"
+        type: "boolean"
+      
+      - name: "auth_score"
+        description: "Overall authentication score (0-1)"
+        type: "float"
+    
+    message_metadata:
+      - name: "has_link_mismatch"
+        description: "Visible link text ≠ actual href"
+        type: "boolean"
+        risk_level: "high"
+      
+      - name: "has_html_form"
+        description: "Email contains HTML form"
+        type: "boolean"
+        risk_level: "high"
+      
+      - name: "recipient_count"
+        description: "Number of recipients (To: field)"
+        type: "integer"
+      
+      - name: "cc_count"
+        description: "Number of CC recipients"
+        type: "integer"
+      
+      - name: "bcc_count_inferred"
+        description: "Inferred BCC recipients (0 in headers)"
+        type: "integer"
+  
+  # Content Metadata (8)
+  content_features:
+    enabled: true
+    count: 8
+    
+    text_metrics:
+      - name: "text_length"
+        description: "Number of tokens in email body"
+        type: "integer"
+      
+      - name: "subject_length"
+        description: "Number of words in subject"
+        type: "integer"
+      
+      - name: "sentence_count"
+        description: "Number of sentences"
+        type: "integer"
+      
+      - name: "avg_word_length"
+        description: "Average length of words"
+        type: "float"
+    
+    obfuscation_indicators:
+      - name: "uppercase_ratio"
+        description: "Ratio of uppercase characters (0-1)"
+        type: "float"
+        high_value_risk: true  # > 0.5 is suspicious
+      
+      - name: "entropy_score"
+        description: "Shannon entropy of token distribution"
+        type: "float"
+        interpretation: "High entropy = more random/obfuscated"
+      
+      - name: "has_risky_attachment"
+        description: "Email has executable or archive attachment"
+        type: "boolean"
+        risky_extensions:
+          - ".exe"
+          - ".bat"
+          - ".scr"
+          - ".zip"
+      
+      - name: "attachment_count"
+        description: "Number of attachments"
+        type: "integer"
+  
+  # Additional Features (0)
+  calculated_features:
+    enabled: true
+    count: 0  # Derived from above
+    
+    ratios:
+      - name: "body_subject_ratio"
+        formula: "text_length / max(subject_length, 1)"
+        interpretation: "Very high or low ratios are suspicious"
+      
+      - name: "url_text_ratio"
+        formula: "url_count / text_length"
+        interpretation: "High ratio = unusually link-heavy"
+
+# ============================================================================
+# TOTAL FEATURE COUNTS
+# ============================================================================
+feature_summary:
+  text_branch:
+    tfidf: 5000
+    urgency_intent: 5
+    subject_analysis: 3
+    embeddings: 768
+    total: 5776
+  
+  structural_branch:
+    url_features: 15
+    domain_features: 12
+    header_features: 10
+    content_features: 8
+    calculated_features: 0
+    total: 45
+  
+  combined:
+    total_features: 5821
+    recommendation: |
+      For baseline (TF-IDF only): 5008 features
+      For upgraded (BERT): 5776 text + 45 structural = 5821 features
+      Dimensionality reduction: Optional PCA if needed
+
+# ============================================================================
+# FEATURE IMPORTANCE TRACKING (SHAP-based)
+# ============================================================================
+feature_importance:
+  track_importance: true
+  tracking_method: "SHAP"
+  
+  expected_high_importance_features:
+    - "has_shortened_url"
+    - "from_reply_mismatch"
+    - "has_percent_encoding"
+    - "urgency_score"
+    - "has_ip_address"
+    - "credential_score"
+    - "sender_domain_mismatch"
+    - "has_punycode"
+    - "has_link_mismatch"
+  
+  ablation_test:
+    enabled: true
+    description: |
+      Test performance with and without key features
+      to ensure they're actually contributing to predictions
+
+# ============================================================================
+# FEATURE VALIDATION
+# ============================================================================
+feature_validation:
+  checks:
+    - missing_value_percentage
+    - feature_correlation_analysis
+    - outlier_detection
+    - feature_scaling_requirements
+    - categorical_encoding_status
+  
+  error_handling:
+    on_missing: "fill_with_default"
+    on_invalid: "cap_to_range"
+    on_error: "log_and_skip_email"

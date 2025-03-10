@@ -1,0 +1,246 @@
+# Dataset Configuration
+
+datasets:
+  # Enron Email Dataset
+  enron:
+    name: "Enron Email Corpus"
+    source: "https://www.cs.cmu.edu/~enron/"
+    size_emails: 517000
+    label: 0  # Legitimate
+    description: "Authentic business emails from Enron company"
+    format: "raw_emails"
+    local_path: "data/raw/enron"
+    download_method: "manual"
+    notes: |
+      - Requires manual download or web scraping
+      - Data available at https://www.cs.cmu.edu/~enron/
+      - Contains personal PII, should be anonymized
+  
+  # SpamAssassin Corpus
+  spamassassin:
+    name: "SpamAssassin Corpus"
+    source: "https://spamassassin.apache.org/datasets/"
+    size_emails: 500000
+    labels:
+      ham: 0  # Legitimate
+      spam: 0  # Will be converted to 0 (not phishing)
+    description: "Spam and ham emails for baseline"
+    format: "raw_emails"
+    local_path: "data/raw/spamassassin"
+    download_method: "direct_download"
+    folds: 5
+    notes: |
+      - Available as public corpus
+      - Folds: Fold0, Fold1, Fold2, Fold3, Fold4
+      - Well-structured, easy to process
+  
+  # PhishTank Dataset
+  phishtank:
+    name: "PhishTank URL Database"
+    source: "https://phishtank.org/developer_info.php"
+    size_phishing_urls: 600000
+    label: 1  # Phishing
+    description: "Known phishing URLs and emails"
+    format: "phishing_urls_with_emails"
+    local_path: "data/raw/phishtank"
+    download_method: "api"
+    api_requirement: "free_api_key"
+    notes: |
+      - Requires free API key from PhishTank
+      - ~50K emails/month free tier
+      - CSV format available
+      - Real-world phishing samples
+  
+  # Nazario Phishing Corpus
+  nazario:
+    name: "Nazario Phishing Corpus"
+    source: "Academic Network (Request from author)"
+    size_emails: 50000
+    label: 1  # Phishing
+    description: "Sophisticated phishing campaigns collected by academic research"
+    format: "raw_emails"
+    local_path: "data/raw/nazario"
+    download_method: "manual_request"
+    contact: "academic_researchers"
+    notes: |
+      - Requires direct contact with researchers
+      - Highly curated samples
+      - Includes sophisticated attacks
+      - May have distribution restrictions
+  
+  # CEAS & TREC Spam Studies
+  ceas_trec:
+    name: "CEAS & TREC Spam Corpus"
+    source: "https://www.trec.nist.gov/data/spam/"
+    size_emails: 100000
+    labels:
+      spam: 0
+      phishing: 1
+    description: "Competition datasets from NIST"
+    format: "raw_emails"
+    local_path: "data/raw/ceas_trec"
+    download_method: "direct_download"
+    notes: |
+      - Academic competition datasets
+      - High quality annotations
+      - Well-tested benchmark
+
+# ============================================================================
+# DATA MERGING & PREPROCESSING STRATEGY
+# ============================================================================
+data_preparation:
+  # Step 1: Individual source processing
+  source_processing:
+    enron_cleanup:
+      remove_pii: true
+      anonymization_method: "hash_name_email"
+      remove_attachments: false
+      keep_headers: true
+    
+    spamassassin_cleanup:
+      relabel_spam_as_legitimate: true  # Spam ≠ Phishing
+      extract_headers: true
+      extract_urls: true
+    
+    phishtank_cleanup:
+      extract_email_from_url_context: true
+      generate_email_samples: true
+      associate_urls_to_emails: true
+    
+    nazario_cleanup:
+      preserve_original_headers: true
+      keep_url_metadata: true
+  
+  # Step 2: Standardization
+  standardization:
+    output_format: "json"
+    fields_required:
+      - id
+      - headers
+      - body
+      - urls
+      - label
+      - source
+    encoding: "utf-8"
+    timestamp_format: "ISO8601"
+  
+  # Step 3: Deduplication
+  deduplication:
+    exact_match: true
+    near_duplicate_threshold: 0.95  # Cosine similarity
+    comparison_fields: ["subject", "body", "from"]
+    removal_strategy: "keep_first"
+  
+  # Step 4: Relabeling & Validation
+  relabeling:
+    strategy: "confident_labeling"
+    handle_label_conflicts: true
+    conflict_resolution: "majority_vote"
+    confidence_threshold: 0.85
+    notes: |
+      - Expect ~1-2% label noise
+      - Use robust loss functions if needed
+      - Consider training with label smoothing
+  
+  # Step 5: Class Balance
+  class_balance:
+    target_distribution:
+      phishing: 0.35  # 35% phishing
+      legitimate: 0.65  # 65% legitimate
+    strategy: "stratified_sampling"
+    reasoning: |
+      - Natural distribution matches real-world inboxes (10-15%)
+      - Higher percentage for model learning
+      - Still representative for deployment
+  
+  # Step 6: Train/Val/Test Split
+  train_val_test_split:
+    ratios:
+      train: 0.70  # 840K emails
+      validation: 0.15  # 180K emails
+      test: 0.15  # 180K emails
+    
+    stratification:
+      by: ["label", "source"]
+      preserve_ratios: true
+    
+    leakage_prevention:
+      method: "sender_based_grouping"
+      rule: "if sender in train, keep entire sender in train"
+      rationale: "Prevent information leakage through sender patterns"
+    
+    random_seed: 42
+
+# ============================================================================
+# FINAL DATASET STATISTICS
+# ============================================================================
+final_dataset:
+  total_emails: 1200000
+  after_deduplication: 1200000  # Expect 20-30% reduction
+  
+  train_set:
+    size: 840000
+    phishing: 294000  # 35%
+    legitimate: 546000  # 65%
+    source_distribution:
+      enron: 384000  # 45.7%
+      spamassassin: 336000  # 40%
+      phishtank: 96000  # 11.4%
+      nazario: 24000  # 2.9%
+  
+  validation_set:
+    size: 180000
+    phishing: 63000  # 35%
+    legitimate: 117000  # 65%
+  
+  test_set:
+    size: 180000
+    phishing: 63000  # 35%
+    legitimate: 117000  # 65%
+  
+  statistics:
+    avg_email_length: 350  # tokens
+    median_email_length: 250
+    max_email_length: 10000
+    min_email_length: 5
+    
+    short_emails_percentage: 18  # <50 tokens
+    long_emails_percentage: 8  # >2000 tokens
+    
+    vocabulary_size: 50000
+    avg_urls_per_email: 1.5
+    emails_with_urls: 45  # percent
+
+# ============================================================================
+# DOWNLOAD INSTRUCTIONS
+# ============================================================================
+download_instructions: |
+  
+  1. ENRON DATASET
+     URL: https://www.cs.cmu.edu/~enron/
+     Method: Manual download or web scraping
+     Expected files: User folders with .pst files
+  
+  2. SPAMASSASSIN CORPUS
+     URL: https://spamassassin.apache.org/datasets/
+     Method: wget or curl to download folds
+     Commands:
+       wget https://spamassassin.apache.org/publiccorpus/20030228_spam.tar.bz2
+       wget https://spamassassin.apache.org/publiccorpus/20030228_ham.tar.bz2
+  
+  3. PHISHTANK DATASET
+     URL: https://phishtank.org/developer_info.php
+     Method: API key (free tier available)
+     Register for API key at: https://phishtank.org/api_register.php
+  
+  4. NAZARIO CORPUS
+     Method: Contact researchers directly
+     Email: (See academic network)
+  
+  5. CEAS/TREC
+     URL: https://www.trec.nist.gov/data/spam/
+     Method: Direct download or registration required
+  
+  SETUP SCRIPT:
+    Run: python scripts/download_datasets.py --all
+    This will download and prepare all datasets.

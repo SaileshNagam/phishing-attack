@@ -1,0 +1,222 @@
+# PhishShield: Global Configuration File
+# Last Updated: March 2024
+
+# ============================================================================
+# PROJECT METADATA
+# ============================================================================
+project:
+  name: "PhishShield"
+  version: "1.0.0"
+  description: "Hybrid Semantic-Structural Email Phishing Detection System"
+  author: "Cybersecurity AI Team"
+  license: "MIT"
+
+# ============================================================================
+# PATHS
+# ============================================================================
+paths:
+  data_raw: "data/raw"
+  data_processed: "data/processed"
+  data_features: "data/features"
+  models: "results/models"
+  plots: "results/plots"
+  predictions: "results/predictions"
+  metrics: "results/metrics"
+  logs: "logs"
+  checkpoints: "results/checkpoints"
+
+# ============================================================================
+# ENVIRONMENT
+# ============================================================================
+environment:
+  random_seed: 42
+  use_gpu: true
+  device: "cuda"  # "cuda" or "cpu"
+  numpy_seed: 42
+  torch_seed: 42
+  tf_seed: 42
+  debug_mode: false
+  verbose: true
+  
+# ============================================================================
+# LOGGING
+# ============================================================================
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s"
+  file: "logs/phishield.log"
+  file_max_bytes: 10485760  # 10MB
+  file_backup_count: 5
+
+# ============================================================================
+# PREPROCESSING
+# ============================================================================
+preprocessing:
+  remove_html: true
+  remove_urls: false  # We need URLs for structural analysis
+  remove_special_chars: false  # Important for URL analysis
+  lowercase: true
+  remove_stopwords: true
+  lemmatization: true
+  tokenizer: "spacy"
+  min_token_length: 2
+  max_email_length: 10000
+  encoding_normalization: "utf-8"
+
+# ============================================================================
+# FEATURE ENGINEERING
+# ============================================================================
+features:
+  text_features:
+    use_tfidf: true
+    tfidf_max_features: 5000
+    tfidf_ngram_range: [1, 2]
+    
+    use_embeddings: true
+    embedding_model: "answerdotai/ModernBERT-base"  # Primary
+    embedding_fallback: "distilbert-base-uncased"    # Fallback
+    embedding_dim: 768
+    embedding_batch_size: 32
+    
+    urgency_keywords:
+      - "urgent"
+      - "immediate"
+      - "action required"
+      - "verify"
+      - "confirm"
+      - "click"
+    
+    credential_keywords:
+      - "password"
+      - "login"
+      - "credentials"
+      - "username"
+      - "authenticate"
+      - "auth"
+    
+    threat_keywords:
+      - "suspend"
+      - "block"
+      - "limited"
+      - "locked"
+      - "risk"
+      - "violation"
+  
+  structural_features:
+    extract_url_features: true
+    extract_domain_features: true
+    extract_header_features: true
+    extract_metadata_features: true
+    extract_content_features: true
+    
+    shortened_url_domains:
+      - "bit.ly"
+      - "tinyurl.com"
+      - "goo.gl"
+      - "t.co"
+      - "ow.ly"
+      - "short.link"
+      - "is.gd"
+      - "v.gd"
+      - "buff.ly"
+    
+    suspicious_tlds:
+      - ".ru"
+      - ".cn"
+      - ".tk"
+      - ".ml"
+      - ".ga"
+      - ".cf"
+      - ".top"
+      - ".download"
+      - ".stream"
+    
+    risky_extensions:
+      - ".exe"
+      - ".bat"
+      - ".scr"
+      - ".vbs"
+      - ".js"
+      - ".zip"
+      - ".rar"
+      - ".7z"
+      - ".cab"
+
+# ============================================================================
+# DATA SPLIT
+# ============================================================================
+data_split:
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  stratified: true
+  random_state: 42
+  handle_leakage: true  # Group by sender to prevent leakage
+
+# ============================================================================
+# CLASS BALANCE
+# ============================================================================
+class_balance:
+  handle_imbalance: false  # Keep natural distribution
+  strategy: "stratified"   # stratified, oversample, undersample
+  target_ratio: null       # null = keep natural; or specify (e.g., 0.5)
+
+# ============================================================================
+# MODEL HYPERPARAMETERS (See model_config.yaml for detailed settings)
+# ============================================================================
+models:
+  baseline_models:
+    use_tfidf_logreg: true
+    use_tfidf_rf: true
+  
+  upgraded_models:
+    use_modernbert_text: true
+    use_distilbert_fallback: false
+    use_lightgbm_structural: true
+    use_random_forest_fallback: false
+  
+  fusion_strategy: "stacking"  # stacking, late_fusion, early_fusion
+  threshold: 0.5
+  adaptive_weighting: true
+
+# ============================================================================
+# EVALUATION
+# ============================================================================
+evaluation:
+  metrics:
+    - "accuracy"
+    - "precision"
+    - "recall"
+    - "f1"
+    - "roc_auc"
+    - "pr_auc"
+    - "confusion_matrix"
+    - "classification_report"
+  
+  cross_validation:
+    cv_folds: 5
+    stratified: true
+  
+  track_short_emails: true
+  short_email_threshold: 50  # tokens
+
+# ============================================================================
+# DEPLOYMENT
+# ============================================================================
+deployment:
+  api:
+    host: "0.0.0.0"
+    port: 8000
+    workers: 4
+    reload: false
+    
+  inference:
+    batch_size: 32
+    max_latency_ms: 200
+    enable_caching: true
+    cache_size: 10000
+  
+  dashboard:
+    host: "0.0.0.0"
+    port: 8501
+    theme: "dark"
