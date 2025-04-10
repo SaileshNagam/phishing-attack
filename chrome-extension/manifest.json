@@ -1,0 +1,62 @@
+{
+  "manifest_version": 3,
+  "name": "PhishShield — Email Phishing Detector",
+  "version": "2.0",
+  "description": "AI-powered, real-time phishing detection for Gmail. Injects risk banners and highlights suspicious links.",
+
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "notifications",
+    "tabs"
+  ],
+
+  "host_permissions": [
+    "https://mail.google.com/*",
+    "https://inbox.google.com/*",
+    "http://localhost:8000/*",
+    "http://127.0.0.1:8000/*",
+    "http://localhost:8501/*",
+    "http://127.0.0.1:8501/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "PhishShield — Check Email",
+    "default_icons": {
+      "16":  "images/icon16.svg",
+      "48":  "images/icon48.svg",
+      "128": "images/icon128.svg"
+    }
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://mail.google.com/*",
+        "https://inbox.google.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "icons": {
+    "16":  "images/icon16.svg",
+    "48":  "images/icon48.svg",
+    "128": "images/icon128.svg"
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["content.css"],
+      "matches": ["https://mail.google.com/*"]
+    }
+  ]
+}
