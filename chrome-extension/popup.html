@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PhishShield</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="ps-app" id="ps-app">
+
+    <!-- ── Header ────────────────────────────────────────────────────────── -->
+    <header class="ps-header">
+      <div class="ps-logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7l-9-5z" fill="#007AFF" opacity="0.9"/>
+          <path d="M10 14l-2-2 1.4-1.4L10 11.2l4.6-4.6L16 8l-6 6z" fill="#1a1a1a"/>
+        </svg>
+        <span>PhishShield</span>
+      </div>
+      <div class="ps-api-dot" id="api-dot" title="API Status">
+        <span class="dot"></span>
+        <span id="api-label">Checking…</span>
+      </div>
+    </header>
+
+    <!-- ── Scanning state ─────────────────────────────────────────────── -->
+    <div id="state-scanning" class="ps-state" style="display:none;">
+      <div class="ps-scanner-ring">
+        <svg class="scanner-svg" viewBox="0 0 60 60">
+          <circle cx="30" cy="30" r="26" fill="none" stroke="#262626" stroke-width="4"/>
+          <circle cx="30" cy="30" r="26" fill="none" stroke="#007AFF" stroke-width="4"
+                  stroke-dasharray="50 114" stroke-linecap="round"
+                  class="scanner-arc"/>
+        </svg>
+        <span class="scanner-icon">🔍</span>
+      </div>
+      <p class="ps-scanning-text">Analysing email…</p>
+    </div>
+
+    <!-- ── No email / Idle state ─────────────────────────────────────── -->
+    <div id="state-no-email" class="ps-state" style="display:none;">
+      <div class="ps-empty-icon">📧</div>
+      <p class="ps-hint">Open an email in Gmail and click Inspect.</p>
+    </div>
+
+    <!-- ── Error state ────────────────────────────────────────────────── -->
+    <div id="state-error" class="ps-state" style="display:none;">
+      <div class="ps-empty-icon">⚠️</div>
+      <p id="error-msg" class="ps-hint ps-error-text">Could not reach API.</p>
+      <button id="btn-retry" class="ps-btn ps-btn-ghost" onclick="startScan()">↺ Retry</button>
+    </div>
+
+    <!-- ── Result state ───────────────────────────────────────────────── -->
+    <div id="state-result" class="ps-state" style="display:none;">
+
+      <!-- Safety Gauge -->
+      <div class="ps-gauge-wrap">
+        <svg class="ps-gauge" viewBox="0 0 140 80" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#34C759;stop-opacity:1" />
+              <stop offset="50%" style="stop-color:#FF9500;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#FF3B30;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <path d="M 20 70 A 50 50 0 0 1 120 70" fill="none" stroke="url(#gauge-grad)" stroke-width="8" stroke-linecap="round"/>
+          <circle cx="60" cy="70" r="6" fill="#FFFFFF"/>
+        </svg>
+        <div class="ps-gauge-label">
+          <span class="ps-score-num">--</span>
+          <span class="ps-score-unit">/100</span>
+        </div>
+        <div id="gauge-verdict" class="ps-verdict">--</div>
+      </div>
+
+      <!-- Risk badge -->
+      <div id="risk-badge" class="ps-risk-badge">LOW</div>
+
+      <!-- 3-bullet reasons -->
+      <div class="ps-reasons">
+        <div class="ps-reasons-title">Analysis</div>
+        <ul id="reasons-list" class="ps-reasons-list"></ul>
+      </div>
+
+      <!-- Confidence bar -->
+      <div class="ps-conf-row">
+        <span class="ps-conf-label">Confidence</span>
+        <div class="ps-conf-bar-wrap">
+          <div id="conf-bar" class="ps-conf-bar"></div>
+        </div>
+        <span id="conf-pct" class="ps-conf-pct">--</span>
+      </div>
+
+      <!-- Actions -->
+      <div class="ps-actions">
+        <button id="btn-rescan" class="ps-btn ps-btn-ghost">↺ Re-scan</button>
+        <button id="btn-dashboard" class="ps-btn ps-btn-primary">📊 Full Report</button>
+      </div>
+
+      <!-- External Threat Intelligence Card -->
+      <div id="external-threat-card" class="ps-external-threat-card" style="display:none;">
+        <div class="ext-header">
+          <h3 class="ext-title">Threat Intelligence</h3>
+          <span id="ext-status-pill" class="ext-status-pill ext-status-queued">Queued</span>
+        </div>
+
+        <!-- Queued State -->
+        <div id="ext-state-queued" class="ext-state" style="display:none;">
+          <p class="ext-subtitle">DNS and VirusTotal signals are being checked</p>
+          <div class="ext-scanner-dot"></div>
+        </div>
+
+        <!-- Running State: Step List -->
+        <div id="ext-state-running" class="ext-state" style="display:none;">
+          <p class="ext-subtitle">Scanning for external threats...</p>
+          <div class="ext-steps">
+            <div class="ext-step ext-step-pending" data-step="1">
+              <div class="ext-step-indicator">1</div>
+              <span>Extracting URLs</span>
+            </div>
+            <div class="ext-step ext-step-pending" data-step="2">
+              <div class="ext-step-indicator">2</div>
+              <span>Resolving DNS records</span>
+            </div>
+            <div class="ext-step ext-step-pending" data-step="3">
+              <div class="ext-step-indicator">3</div>
+              <span>Checking domain reputation</span>
+            </div>
+            <div class="ext-step ext-step-pending" data-step="4">
+              <div class="ext-step-indicator">4</div>
+              <span>Querying VirusTotal</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Completed State -->
+        <div id="ext-state-completed" class="ext-state" style="display:none;">
+          <div class="ext-risk-score-section">
+            <div class="ext-risk-display">
+              <span id="ext-risk-score" class="ext-score-num">--</span>
+              <span class="ext-score-denom">/ 100</span>
+            </div>
+            <div class="ext-risk-label-wrap">
+              <span id="ext-risk-label" class="ext-risk-label">Unknown</span>
+            </div>
+          </div>
+
+          <div class="ext-details">
+            <div class="ext-detail-row">
+              <span class="ext-detail-label">URL</span>
+              <span id="ext-url-display" class="ext-url" title="Scanned URL">Unknown</span>
+            </div>
+            <div class="ext-detail-row">
+              <span class="ext-detail-label">DNS</span>
+              <span id="ext-dns-status" class="ext-dns-status">Unknown</span>
+            </div>
+          </div>
+
+          <div id="ext-signals-section" class="ext-signals" style="display:none;">
+            <h4 class="ext-signals-title">Signals</h4>
+            <ul id="ext-signals-list" class="ext-signals-list"></ul>
+          </div>
+
+          <div id="ext-vt-section" class="ext-vt-summary" style="display:none;">
+            <div class="ext-vt-row">
+              <span class="ext-vt-label">Malicious</span>
+              <span id="ext-vt-malicious" class="ext-vt-count">--</span>
+            </div>
+            <div class="ext-vt-row">
+              <span class="ext-vt-label">Suspicious</span>
+              <span id="ext-vt-suspicious" class="ext-vt-count">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Failed State -->
+        <div id="ext-state-failed" class="ext-state" style="display:none;">
+          <div class="ext-error-icon">⚠</div>
+          <p class="ext-error-title">External scan failed</p>
+          <p class="ext-error-msg" id="ext-error-message">An error occurred during external scanning.</p>
+          <p class="ext-error-note">ML phishing result is still available above.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Footer ─────────────────────────────────────────────────────── -->
+    <footer class="ps-footer">
+      <button id="btn-settings" class="ps-footer-link">Settings</button>
+      <span class="ps-footer-sep">·</span>
+      <span class="ps-version">v4.0</span>
+    </footer>
+
+  </div><!-- /ps-app -->
+
+  <!-- ── Settings Panel ──────────────────────────────────────────────────── -->
+  <div id="settings-panel" class="ps-settings" style="display:none;">
+    <div class="ps-settings-header">
+      <span>Settings</span>
+      <button id="btn-close-settings" class="ps-icon-btn">✕</button>
+    </div>
+    <div class="ps-settings-body">
+      <label class="ps-field">
+        <span>API URL</span>
+        <input id="inp-api-url" type="text" placeholder="http://localhost:8000" />
+      </label>
+      <label class="ps-field">
+        <span>Dashboard URL</span>
+        <input id="inp-dashboard-url" type="text" placeholder="http://localhost:8000/dashboard" />
+      </label>
+      <label class="ps-toggle">
+        <span>Risk Banner in Gmail</span>
+        <input id="chk-banner" type="checkbox" checked />
+      </label>
+      <label class="ps-toggle">
+        <span>Highlight Suspicious Links</span>
+        <input id="chk-links" type="checkbox" checked />
+      </label>
+      <label class="ps-toggle">
+        <span>Desktop Notifications</span>
+        <input id="chk-notif" type="checkbox" checked />
+      </label>
+      <label class="ps-toggle">
+        <span>Auto-scan on Email Open</span>
+        <input id="chk-autoscan" type="checkbox" />
+      </label>
+    </div>
+    <div class="ps-settings-footer">
+      <button id="btn-save-settings" class="ps-btn ps-btn-primary">Save</button>
+      <button id="btn-test-api" class="ps-btn ps-btn-ghost">Test API</button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
