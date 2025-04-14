@@ -1,0 +1,611 @@
+/* ──────────────────────────────────────────────────────────────────────────────
+   PhishShield Popup — Apple-inspired Dark Mode CSS v4.0
+   Compact, polished UI with soft backgrounds and subtle borders
+────────────────────────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  width: 380px;
+  max-height: 600px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  background: #1a1a1a;
+  color: #FFFFFF;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+/* ── App Shell ─────────────────────────────────────────────────────────────── */
+.ps-app { display: flex; flex-direction: column; min-height: 340px; }
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+.ps-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #262626;
+  border-bottom: 1px solid #333333;
+}
+
+.ps-logo {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 600; font-size: 14px; color: #FFFFFF;
+  letter-spacing: 0.2px;
+}
+
+.ps-api-dot {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; color: #888888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #555555;
+  transition: background 0.3s;
+}
+
+.dot.online  { background: #34C759; box-shadow: 0 0 4px rgba(52, 199, 89, 0.5); }
+.dot.offline { background: #FF3B30; box-shadow: 0 0 4px rgba(255, 59, 48, 0.5); }
+
+/* ── States ────────────────────────────────────────────────────────────────── */
+.ps-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 12px;
+  padding: 20px 16px; flex: 1;
+}
+
+/* ── Scanning ──────────────────────────────────────────────────────────────── */
+.ps-scanner-ring {
+  position: relative; width: 48px; height: 48px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.scanner-svg { width: 48px; height: 48px; position: absolute; top: 0; left: 0; }
+.scanner-arc { animation: ps-spin 1s linear infinite; transform-origin: center; }
+
+@keyframes ps-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.scanner-icon { font-size: 18px; position: relative; z-index: 1; }
+.ps-scanning-text { color: #888888; font-size: 12px; }
+
+/* ── Empty / Error ─────────────────────────────────────────────────────────── */
+.ps-empty-icon { font-size: 28px; margin-bottom: 4px; }
+.ps-hint {
+  color: #888888; font-size: 12px; text-align: center;
+  max-width: 260px; line-height: 1.4;
+}
+
+.ps-error-text { color: #FF3B30; }
+
+/* ── Gauge ─────────────────────────────────────────────────────────────────── */
+.ps-gauge-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  width: 100%; padding: 8px 0;
+}
+
+.ps-gauge { width: 120px; height: 60px; overflow: visible; }
+
+.ps-gauge-label {
+  display: flex; align-items: baseline; gap: 4px;
+}
+
+.ps-score-num  { font-size: 28px; font-weight: 700; color: #FFFFFF; }
+.ps-score-unit { font-size: 12px; color: #666666; }
+
+.ps-verdict {
+  font-weight: 600; font-size: 12px; letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 4px 12px; border-radius: 12px;
+  background: #262626;
+}
+
+.verdict-safe    { color: #34C759; }
+.verdict-medium  { color: #FF9500; }
+.verdict-danger  { color: #FF3B30; }
+.verdict-unknown { color: #888888; }
+
+/* ── Risk Badge ────────────────────────────────────────────────────────────── */
+.ps-risk-badge {
+  display: inline-block;
+  padding: 4px 14px; border-radius: 16px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+}
+
+.badge-low      { color: #34C759; border-color: #34C75944; background: rgba(52, 199, 89, 0.1); }
+.badge-medium   { color: #FF9500; border-color: #FF950044; background: rgba(255, 149, 0, 0.1); }
+.badge-high     { color: #FF6B30; border-color: #FF6B3044; background: rgba(255, 107, 48, 0.1); }
+.badge-critical { color: #FF3B30; border-color: #FF3B3044; background: rgba(255, 59, 48, 0.15); }
+
+/* ── Reasons ───────────────────────────────────────────────────────────────── */
+.ps-reasons {
+  width: 100%;
+  background: #262626;
+  border: 1px solid #333333;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 8px 0;
+}
+
+.ps-reasons-title {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px;
+  color: #666666; margin-bottom: 8px; font-weight: 600;
+}
+
+.ps-reasons-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.ps-reasons-list li {
+  display: flex; gap: 8px; align-items: flex-start;
+  font-size: 11px; color: #CCCCCC; line-height: 1.4;
+}
+
+.ps-reasons-list li::before {
+  content: '▸'; color: #007AFF; flex-shrink: 0; margin-top: 2px;
+}
+
+/* ── Confidence Bar ────────────────────────────────────────────────────────── */
+.ps-conf-row {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 4px 0;
+}
+
+.ps-conf-label { font-size: 10px; color: #666666; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.ps-conf-bar-wrap {
+  flex: 1; height: 4px; background: #262626; border-radius: 2px; overflow: hidden;
+}
+
+.ps-conf-bar { height: 100%; width: 0; border-radius: 2px; transition: width 0.5s ease; }
+.ps-conf-bar.safe   { background: linear-gradient(90deg, #34C759, #30d158); }
+.ps-conf-bar.warn   { background: linear-gradient(90deg, #FF9500, #FF9F0A); }
+.ps-conf-bar.danger { background: linear-gradient(90deg, #FF3B30, #FF453A); }
+
+.ps-conf-pct { font-size: 10px; color: #666666; width: 35px; text-align: right; }
+
+/* ── Actions ───────────────────────────────────────────────────────────────── */
+.ps-actions { display: flex; gap: 8px; width: 100%; margin-top: 8px; }
+
+.ps-btn {
+  flex: 1; padding: 10px 12px; border-radius: 8px;
+  font-size: 12px; font-weight: 600; font-family: inherit;
+  cursor: pointer; border: none; transition: all 0.2s;
+}
+
+.ps-btn-primary {
+  background: #007AFF;
+  color: #FFFFFF;
+}
+
+.ps-btn-primary:hover { background: #0063cf; }
+
+.ps-btn-ghost {
+  background: #262626; color: #CCCCCC;
+  border: 1px solid #333333;
+}
+
+.ps-btn-ghost:hover { background: #333333; color: #FFFFFF; border-color: #444444; }
+
+/* ── Footer ────────────────────────────────────────────────────────────────── */
+.ps-footer {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 8px 16px;
+  background: #262626; border-top: 1px solid #333333;
+  font-size: 10px; color: #666666;
+}
+
+.ps-footer-link {
+  background: none; border: none; color: #666666;
+  font-size: 10px; cursor: pointer; font-family: inherit;
+  padding: 4px 8px; border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.ps-footer-link:hover { color: #007AFF; background: rgba(0, 122, 255, 0.1); }
+
+.ps-footer-sep { color: #444444; }
+
+/* ── Settings Panel ────────────────────────────────────────────────────────── */
+.ps-settings {
+  position: absolute; inset: 0;
+  background: #1a1a1a;
+  display: flex; flex-direction: column;
+  z-index: 100; animation: ps-slide-up 0.2s ease;
+}
+
+@keyframes ps-slide-up {
+  from { transform: translateY(10px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.ps-settings-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 14px;
+  background: #262626; border-bottom: 1px solid #333333;
+  font-weight: 600; font-size: 13px; color: #FFFFFF;
+}
+
+.ps-icon-btn {
+  background: none; border: none; color: #888888;
+  font-size: 18px; cursor: pointer; transition: color 0.2s;
+  padding: 4px;
+}
+
+.ps-icon-btn:hover { color: #FFFFFF; }
+
+.ps-settings-body {
+  flex: 1; overflow-y: auto; padding: 14px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+.ps-field {
+  display: flex; flex-direction: column; gap: 6px;
+  font-size: 11px; color: #888888; cursor: default;
+}
+
+.ps-field input {
+  background: #262626; border: 1px solid #333333; border-radius: 6px;
+  color: #FFFFFF; padding: 8px 10px; font-size: 11px; font-family: inherit;
+  outline: none; transition: border-color 0.2s;
+}
+
+.ps-field input:focus { border-color: #007AFF; }
+
+.ps-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 0;
+  font-size: 12px; color: #CCCCCC; cursor: pointer;
+}
+
+.ps-toggle input[type="checkbox"] {
+  accent-color: #007AFF; width: 16px; height: 16px; cursor: pointer;
+}
+
+.ps-settings-footer {
+  display: flex; gap: 8px; padding: 12px 14px;
+  background: #262626; border-top: 1px solid #333333;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #1a1a1a; }
+::-webkit-scrollbar-thumb { background: #333333; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #444444; }
+
+/* ── External Threat Intelligence Card ─────────────────────────────────────── */
+.ps-external-threat-card {
+  width: 100%;
+  background: #262626;
+  border: 1px solid #333333;
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+.ext-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.ext-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #FFFFFF;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ext-status-pill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.ext-status-queued {
+  background: #262626;
+  color: #888888;
+  border: 1px solid #333333;
+}
+
+.ext-status-running {
+  background: rgba(6, 182, 212, 0.15);
+  color: #06b6d4;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.ext-status-completed {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.ext-status-failed {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.ext-state {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ext-subtitle {
+  font-size: 11px;
+  color: #888888;
+  margin: 0;
+}
+
+/* ── Queued/Idle State ─────────────────────────────────────────────────────── */
+.ext-scanner-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #06b6d4;
+  margin: 4px 0;
+  animation: ps-scanner-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes ps-scanner-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.4); opacity: 1; }
+  50% { box-shadow: 0 0 0 4px rgba(6, 182, 212, 0); opacity: 0.5; }
+}
+
+/* ── Steps ─────────────────────────────────────────────────────────────────── */
+.ext-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ext-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #CCCCCC;
+}
+
+.ext-step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 600;
+  flex-shrink: 0;
+  background: #262626;
+  color: #888888;
+  border: 1px solid #333333;
+}
+
+.ext-step-active .ext-step-indicator {
+  background: #06b6d4;
+  color: #1a1a1a;
+  border-color: #06b6d4;
+}
+
+.ext-step-complete .ext-step-indicator {
+  background: #10b981;
+  color: #1a1a1a;
+  border-color: #10b981;
+}
+
+.ext-step-pending .ext-step-indicator {
+  background: #262626;
+  color: #666666;
+  border-color: #333333;
+}
+
+/* ── Risk Score Section ────────────────────────────────────────────────────── */
+.ext-risk-score-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: #1a1a1a;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #333333;
+}
+
+.ext-risk-display {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.ext-score-num {
+  font-size: 24px;
+  font-weight: 700;
+  color: #06b6d4;
+}
+
+.ext-score-denom {
+  font-size: 11px;
+  color: #666666;
+}
+
+.ext-risk-label-wrap {
+  flex: 1;
+}
+
+.ext-risk-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #FFFFFF;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.ext-risk-label.low { color: #10b981; }
+.ext-risk-label.medium { color: #f59e0b; }
+.ext-risk-label.high { color: #ef4444; }
+
+/* ── Details ───────────────────────────────────────────────────────────────── */
+.ext-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: #1a1a1a;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  border: 1px solid #333333;
+}
+
+.ext-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+}
+
+.ext-detail-label {
+  color: #666666;
+  font-weight: 500;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  font-size: 9px;
+  letter-spacing: 0.3px;
+}
+
+.ext-url {
+  color: #CCCCCC;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 9px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.ext-dns-status {
+  color: #CCCCCC;
+  font-size: 10px;
+}
+
+/* ── Signals ───────────────────────────────────────────────────────────────── */
+.ext-signals {
+  padding: 8px;
+  background: #1a1a1a;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  border: 1px solid #333333;
+}
+
+.ext-signals-title {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666666;
+  font-weight: 600;
+  margin: 0 0 6px 0;
+}
+
+.ext-signals-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+}
+
+.ext-signals-list li {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  font-size: 10px;
+  color: #CCCCCC;
+  line-height: 1.3;
+}
+
+.ext-signals-list li::before {
+  content: '▸';
+  color: #06b6d4;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── VirusTotal Summary ─────────────────────────────────────────────────────── */
+.ext-vt-summary {
+  padding: 8px;
+  background: #1a1a1a;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  border: 1px solid #333333;
+}
+
+.ext-vt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  margin-bottom: 4px;
+}
+
+.ext-vt-row:last-child {
+  margin-bottom: 0;
+}
+
+.ext-vt-label {
+  color: #666666;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.ext-vt-count {
+  color: #CCCCCC;
+  font-weight: 600;
+}
+
+/* ── Error State ───────────────────────────────────────────────────────────── */
+.ext-error-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.ext-error-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #ef4444;
+  margin: 0 0 4px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.ext-error-msg {
+  font-size: 10px;
+  color: #CCCCCC;
+  margin: 0 0 6px 0;
+}
+
+.ext-error-note {
+  font-size: 9px;
+  color: #666666;
+  margin: 0;
+  font-style: italic;
+}

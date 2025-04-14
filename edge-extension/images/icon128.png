@@ -1,0 +1,13 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="128" height="128" rx="24" fill="#667eea"/>
+  
+  <!-- Shield -->
+  <path d="M 64 20 L 40 35 L 40 65 Q 40 90 64 110 Q 88 90 88 65 L 88 35 Z" fill="white" stroke="#667eea" stroke-width="2"/>
+  
+  <!-- Checkmark -->
+  <g transform="translate(64, 65)">
+    <circle cx="0" cy="0" r="25" fill="#51cf66"/>
+    <path d="M -8 0 L -2 8 L 10 -8" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
