@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhishShield | Threat Intelligence Portal</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --primary: #2f81f7;
+      --success: #238636;
+      --warning: #d29922;
+      --danger: #da3633;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 40px 20px; line-height: 1.5; }
+    .container { max-width: 1000px; margin: 0 auto; }
+    
+    header { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+    header h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; }
+    .logo-icon { width: 32px; height: 32px; background: var(--primary); border-radius: 6px; display: grid; place-items: center; font-weight: bold; color: white; }
+    
+    .status-bar { display: flex; gap: 20px; margin-bottom: 20px; font-size: 13px; color: var(--text-muted); }
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--success); margin-right: 6px; }
+    
+    .grid { display: grid; grid-template-columns: 1fr 350px; gap: 24px; align-items: start; }
+    
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 24px; }
+    .card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+    
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+    .form-control { width: 100%; bg: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; color: var(--text); background: var(--bg); font-family: monospace; font-size: 13px; }
+    textarea.form-control { min-height: 150px; resize: vertical; }
+    .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(47, 129, 247, 0.3); }
+    
+    .btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+    .btn:hover { background: #1f6feb; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    
+    /* Results panel */
+    #results-panel { display: none; }
+    .verdict-header { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-radius: 6px; margin-bottom: 20px; font-weight: 600; }
+    .verdict-critical { background: rgba(218, 54, 51, 0.15); border: 1px solid var(--danger); color: #ff7b72; }
+    .verdict-medium { background: rgba(210, 153, 34, 0.15); border: 1px solid var(--warning); color: #e3b341; }
+    .verdict-safe { background: rgba(35, 134, 54, 0.15); border: 1px solid var(--success); color: #3fb950; }
+    
+    .score-circle { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; border: 4px solid currentColor; font-size: 18px; font-weight: bold; }
+    
+    .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    .metric { background: var(--bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 13px; }
+    .metric-val { font-size: 18px; font-weight: 600; font-family: monospace; margin-top: 4px; color: var(--primary); }
+    
+    .reasons-list { list-style: none; margin-bottom: 20px; }
+    .reasons-list li { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; display: flex; align-items: flex-start; gap: 10px; }
+    .reasons-list li::before { content: "⚡"; }
+    
+    .indicator-pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; background: var(--bg); border: 1px solid var(--border); margin: 0 4px 4px 0; }
+    .indicator-red { border-color: var(--danger); color: #ff7b72; }
+    
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo-icon">🛡️</div>
+      <h1>PhishShield <span>Platform</span></h1>
+    </header>
+    
+    <div class="status-bar">
+      <div><span class="status-dot"></span> API Engine: Online</div>
+      <div>🧬 DistilBERT + XGBoost Late-Fusion</div>
+    </div>
+
+    <div class="grid">
+      <!-- Input Form -->
+      <div class="card">
+        <h2 class="card-title">New Scan / Manual Input</h2>
+        <form id="scan-form">
+          <div class="form-group">
+            <label>Subject Line</label>
+            <input type="text" id="inp-subject" class="form-control" placeholder="e.g. Action Required: Account Suspension" required>
+          </div>
+          <div class="form-group">
+            <label>Sender Email (Optional)</label>
+            <input type="email" id="inp-sender" class="form-control" placeholder="e.g. admin@paypal-secure-update.com">
+          </div>
+          <div class="form-group">
+            <label>Reply-To Email (Optional)</label>
+            <input type="email" id="inp-reply" class="form-control" placeholder="e.g. attacker123@gmail.com">
+          </div>
+          <div class="form-group">
+            <label>Email Body (Source Text)</label>
+            <textarea id="inp-body" class="form-control" placeholder="Paste the full email text here..." required></textarea>
+          </div>
+          <div class="form-group">
+            <label>Extracted URLs (Comma separated)</label>
+            <input type="text" id="inp-urls" class="form-control" placeholder="http://bit.ly/123, http://192.168.1.1/login">
+          </div>
+          <button type="submit" id="btn-scan" class="btn">
+            <span>🔬 Analyze Email</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Results Panel -->
+      <div class="card" id="results-panel">
+        <h2 class="card-title">Analysis Report</h2>
+        
+        <div id="verdict-banner" class="verdict-header verdict-safe">
+          <div>
+            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8">Final Verdict</div>
+            <div id="res-verdict" style="font-size: 24px;">CLEAN</div>
+          </div>
+          <div class="score-circle" id="res-score">100</div>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric">
+            <div>Confidence</div>
+            <div class="metric-val" id="res-conf">98.5%</div>
+          </div>
+          <div class="metric">
+            <div>Recommended Action</div>
+            <div class="metric-val" id="res-action" style="color: var(--text);">ALLOW</div>
+          </div>
+        </div>
+
+        <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--text-muted);">Explainable AI Reasoning</h3>
+        <ul class="reasons-list" id="res-reasons"></ul>
+
+        <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--text-muted);">Structural Indicators (XGBoost)</h3>
+        <div id="res-indicators"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="utils.js"></script>
+  <script src="extractor.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

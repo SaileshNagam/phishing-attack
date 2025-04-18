@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhishShield | Detailed Analysis Report</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --primary: #2f81f7;
+      --success: #238636;
+      --warning: #d29922;
+      --danger: #da3633;
+      --info: #1f6feb;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 30px;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 20px;
+    }
+
+    header h1 {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+    }
+
+    .scan-metadata {
+      display: flex;
+      gap: 24px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .metadata-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .metadata-label {
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .metadata-value {
+      color: var(--primary);
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    /* Navigation Tabs */
+    .tabs {
+      display: flex;
+      gap: 2px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      padding: 12px 20px;
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      color: var(--text);
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    /* Tab Content */
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Section */
+    .section {
+      margin-bottom: 32px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-icon {
+      font-size: 20px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .section-count {
+      margin-left: auto;
+      background: var(--border);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      background: var(--bg);
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-content {
+      padding: 16px;
+    }
+
+    /* Table */
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .table th {
+      background: var(--bg);
+      padding: 12px;
+      text-align: left;
+      font-weight: 700;
+      border-bottom: 2px solid var(--border);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 11px;
+    }
+
+    .table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .table tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Status Badges */
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-critical {
+      background: rgba(218, 54, 51, 0.2);
+      color: #ff7b72;
+      border: 1px solid rgba(218, 54, 51, 0.3);
+    }
+
+    .badge-high {
+      background: rgba(210, 153, 34, 0.2);
+      color: #e3b341;
+      border: 1px solid rgba(210, 153, 34, 0.3);
+    }
+
+    .badge-medium {
+      background: rgba(210, 153, 34, 0.2);
+      color: #e3b341;
+      border: 1px solid rgba(210, 153, 34, 0.3);
+    }
+
+    .badge-low {
+      background: rgba(35, 134, 54, 0.2);
+      color: #3fb950;
+      border: 1px solid rgba(35, 134, 54, 0.3);
+    }
+
+    .badge-safe {
+      background: rgba(35, 134, 54, 0.2);
+      color: #3fb950;
+      border: 1px solid rgba(35, 134, 54, 0.3);
+    }
+
+    /* Verdict Box */
+    .verdict-box {
+      background: var(--card);
+      border: 2px solid var(--primary);
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .verdict-content h2 {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    .verdict-content p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .verdict-score {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 32px;
+      font-weight: 700;
+      border: 4px solid var(--primary);
+      text-align: center;
+    }
+
+    /* List Items */
+    .list-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      align-items: flex-start;
+    }
+
+    .list-item:last-child {
+      border-bottom: none;
+    }
+
+    .list-item-icon {
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .list-item-content {
+      flex-grow: 1;
+    }
+
+    .list-item-label {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .list-item-details {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: monospace;
+      word-break: break-all;
+    }
+
+    /* Indicators Grid */
+    .indicators-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .indicator {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .indicator-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+
+    .indicator-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Copy Button */
+    .copy-btn {
+      padding: 4px 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    /* Risk Bar */
+    .risk-bar {
+      width: 100%;
+      height: 24px;
+      background: var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .risk-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--success), var(--warning), var(--danger));
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: white;
+      transition: width 0.3s;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-muted);
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .verdict-box {
+        grid-template-columns: 1fr;
+      }
+
+      .verdict-score {
+        width: 80px;
+        height: 80px;
+        font-size: 24px;
+      }
+
+      .tabs {
+        flex-wrap: wrap;
+      }
+
+      .tab-btn {
+        font-size: 12px;
+        padding: 10px 16px;
+      }
+
+      .indicators-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .section-header {
+        flex-wrap: wrap;
+      }
+
+      .section-count {
+        order: -1;
+      }
+    }
+
+    /* Copy Animation */
+    @keyframes copyFlash {
+      0% { background: var(--primary); }
+      100% { background: var(--bg); }
+    }
+
+    .copy-btn.copied {
+      animation: copyFlash 0.5s ease-out;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>
+        <div class="logo">🔍</div>
+        <div>
+          PhishShield Report
+          <div style="font-size: 13px; color: var(--text-muted); font-weight: 400;">Forensic Email Analysis</div>
+        </div>
+      </h1>
+      <div class="scan-metadata">
+        <div class="metadata-item">
+          <span class="metadata-label">Scan ID</span>
+          <span class="metadata-value" id="scan-id">...</span>
+        </div>
+        <div class="metadata-item">
+          <span class="metadata-label">Timestamp</span>
+          <span class="metadata-value" id="scan-timestamp">...</span>
+        </div>
+        <div class="metadata-item">
+          <span class="metadata-label">Processing</span>
+          <span class="metadata-value" id="scan-processing">...</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="overview">📊 Overview</button>
+      <button class="tab-btn" data-tab="urls">🔗 URLs & Domains</button>
+      <button class="tab-btn" data-tab="headers">📧 Email Headers</button>
+      <button class="tab-btn" data-tab="content">📝 Content Analysis</button>
+      <button class="tab-btn" data-tab="infrastructure">🖥️ Infrastructure</button>
+      <button class="tab-btn" data-tab="forensics">🔬 Forensics</button>
+      <button class="tab-btn" data-tab="threat-intel">🌍 Threat Intel</button>
+    </div>
+
+    <!-- Overview Tab -->
+    <div id="overview" class="tab-content active">
+      <!-- Verdict Box -->
+      <div class="verdict-box" id="verdict-section">
+        <div class="verdict-content">
+          <h2 id="verdict-title">Loading Analysis...</h2>
+          <p id="verdict-description">Processing email content</p>
+        </div>
+        <div class="verdict-score" id="verdict-score">--</div>
+      </div>
+
+      <!-- Email Summary Card -->
+      <div class="section" id="email-summary-section">
+        <div class="section-header">
+          <span class="section-icon">📧</span>
+          <span class="section-title">Email Summary</span>
+        </div>
+        <div class="card">
+          <div class="card-content">
+            <div class="list-item">
+              <div class="list-item-icon">📌</div>
+              <div class="list-item-content">
+                <div class="list-item-label">Subject</div>
+                <div class="list-item-details" id="email-subject">(Loading...)</div>
+              </div>
+            </div>
+            <div class="list-item">
+              <div class="list-item-icon">👤</div>
+              <div class="list-item-content">
+                <div class="list-item-label">Sender</div>
+                <div class="list-item-details" id="email-sender">(Loading...)</div>
+              </div>
+            </div>
+            <div class="list-item">
+              <div class="list-item-icon">↩️</div>
+              <div class="list-item-content">
+                <div class="list-item-label">Reply-To</div>
+                <div class="list-item-details" id="email-reply-to">(Not specified)</div>
+              </div>
+            </div>
+            <div class="list-item">
+              <div class="list-item-icon">🔗</div>
+              <div class="list-item-content">
+                <div class="list-item-label">URLs Found</div>
+                <div class="list-item-details" id="email-url-count">0</div>
+              </div>
+            </div>
+            <div class="list-item" id="body-preview-row" style="display: none;">
+              <div class="list-item-icon">📝</div>
+              <div class="list-item-content">
+                <div class="list-item-label">Body Preview</div>
+                <div class="list-item-details" id="email-body-preview" style="max-height: 100px; overflow-y: auto; white-space: pre-wrap;">(No body text)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk Factors -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-icon">⚠️</span>
+          <span class="section-title">Risk Factors</span>
+          <span class="section-count" id="risk-count">0 detected</span>
+        </div>
+        <div id="risk-factors" class="card">
+          <div class="card-content" id="risk-list">
+            <div class="empty-state">
+              <div class="empty-state-icon">✓</div>
+              <p>No significant risk factors detected</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Indicators -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-icon">📈</span>
+          <span class="section-title">Key Metrics</span>
+        </div>
+        <div class="indicators-grid" id="metrics-grid">
+          <div class="indicator">
+            <div class="indicator-value" id="metric-urls">0</div>
+            <div class="indicator-label">Unique Domains</div>
+          </div>
+          <div class="indicator">
+            <div class="indicator-value" id="metric-emails">0</div>
+            <div class="indicator-label">Email Addresses</div>
+          </div>
+          <div class="indicator">
+            <div class="indicator-value" id="metric-ips">0</div>
+            <div class="indicator-label">IP Addresses</div>
+          </div>
+          <div class="indicator">
+            <div class="indicator-value" id="metric-flags">0</div>
+            <div class="indicator-label">Auth Issues</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- URLs Tab -->
+    <div id="urls" class="tab-content">
+      <div class="section">
+        <div class="section-header">
+          <span class="section-icon">🔗</span>
+          <span class="section-title">Extracted URLs & Domains</span>
+          <span class="section-count" id="urls-count">0</span>
+        </div>
+        <div id="urls-list"></div>
+      </div>
+    </div>
+
+    <!-- Headers Tab -->
+    <div id="headers" class="tab-content">
+      <div class="section">
+        <div class="section-header">
+          <span class="section-icon">📧</span>
+          <span class="section-title">Email Header Analysis</span>
+        </div>
+        <div id="headers-content"></div>
+      </div>
+    </div>
+
+    <!-- Content Tab -->
+    <div id="content" class="tab-content">
+      <div class="section">
+        <div class="section-header">
+          <span class="section-icon">📝</span>
+          <span class="section-title">Content & Patterns</span>
+        </div>
+        <div id="content-analysis"></div>
+      </div>
+    </div>
+
+    <!-- Infrastructure Tab -->
+    <div id="infrastructure" class="tab-content">
+      <div class="section">
+        <div class="section-header">
+          <span class="section-icon">🖥️</span>
+          <span class="section-title">Infrastructure Intelligence</span>
+        </div>
+        <div id="infrastructure-content"></div>
+      </div>
+    </div>
+
+    <!-- Forensics Tab -->
+    <div id="forensics" class="tab-content">
+      <div class="section">
+        <div class="section-header">
+          <span class="section-icon">🔬</span>
+          <span class="section-title">Forensic Analysis</span>
+        </div>
+        <div id="forensics-content"></div>
+      </div>
+    </div>
+
+    <!-- Threat Intelligence Tab -->
+    <div id="threat-intel" class="tab-content">
+      <div class="section">
+        <div class="section-header">
+          <span class="section-icon">🌍</span>
+          <span class="section-title">External Threat Intelligence</span>
+          <span class="section-count" id="threat-intel-status">Loading...</span>
+        </div>
+        <div id="threat-intel-content">
+           <div class="empty-state">
+              <div class="empty-state-icon">⏳</div>
+              <p>Fetching external intelligence data from the background scan...</p>
+           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="utils.js"></script>
+  <script src="extractor.js"></script>
+  <script src="report.js"></script>
+</body>
+</html>
