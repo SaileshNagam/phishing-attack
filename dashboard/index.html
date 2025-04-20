@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PhishShield — Security Command Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="shared.css" />
+</head>
+<body>
+  <!-- ── Sidebar Nav ──────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7l-9-5z" fill="#00d4ff" opacity="0.9"/>
+        <path d="M10 14l-2-2 1.4-1.4L10 11.2l4.6-4.6L16 8l-6 6z" fill="#0d1117"/>
+      </svg>
+      <span class="logo-text">PhishShield</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="index.html"    class="nav-item active" id="nav-threat">
+        <span class="nav-icon">🛡</span> Threat History
+      </a>
+      <a href="xai.html"     class="nav-item" id="nav-xai">
+        <span class="nav-icon">📊</span> XAI Analysis
+      </a>
+      <a href="forensics.html" class="nav-item" id="nav-forensics">
+        <span class="nav-icon">🔬</span> Forensics
+      </a>
+    </nav>
+    <div class="sidebar-status">
+      <div id="api-status-dot" class="status-dot"></div>
+      <div>
+        <div class="status-label">API Status</div>
+        <div id="api-status-text" class="status-value">Checking…</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ─────────────────────────────────────────────────────── -->
+  <main class="main-content">
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Threat History</h1>
+        <p class="page-subtitle">All emails scanned by PhishShield in real-time</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-ghost" id="btn-refresh">↺ Refresh</button>
+        <button class="btn btn-ghost" id="btn-clear">🗑 Clear History</button>
+      </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="overview">Overview</button>
+      <button class="tab-btn" data-tab="urls">URLs & Domains</button>
+      <button class="tab-btn" data-tab="virustotal">VirusTotal</button>
+    </div>
+
+    <!-- Tab: Overview (Threat History) -->
+    <div id="tab-overview" class="tab-content active">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-total">--</div>
+        <div class="stat-label">Total Scanned</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="stat-value" id="stat-phishing">--</div>
+        <div class="stat-label">Phishing Detected</div>
+      </div>
+      <div class="stat-card warning">
+        <div class="stat-value" id="stat-suspicious">--</div>
+        <div class="stat-label">Suspicious</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-value" id="stat-safe">--</div>
+        <div class="stat-label">Safe</div>
+      </div>
+
+    <!-- Filter Row -->
+    <div class="filter-row">
+      <input id="search-input" class="search-input" type="text" placeholder="🔍  Search by subject or sender…" />
+      <select id="risk-filter" class="filter-select">
+        <option value="">All Risk Levels</option>
+        <option value="CRITICAL">🔴 Critical</option>
+        <option value="HIGH">🟠 High</option>
+        <option value="MEDIUM">🟡 Medium</option>
+        <option value="LOW">🟢 Low</option>
+      </select>
+      <select id="pred-filter" class="filter-select">
+        <option value="">All Predictions</option>
+        <option value="PHISHING">⚠ Phishing</option>
+        <option value="LEGITIMATE">✔ Legitimate</option>
+      </select>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table class="data-table" id="threat-table">
+        <thead>
+          <tr>
+            <th data-sort="timestamp">Time ↕</th>
+            <th data-sort="subject">Subject ↕</th>
+            <th data-sort="sender">Sender</th>
+            <th data-sort="risk_level">Risk ↕</th>
+            <th data-sort="safety_score">Safety Score ↕</th>
+            <th data-sort="confidence">Confidence ↕</th>
+            <th>SPF / DKIM</th>
+            <th>URLs</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <tr><td colspan="8" class="table-empty" id="table-empty-msg">
+            <div class="spinner"></div>
+            Loading threat history…
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="pagination"></div>
+    </div><!-- End tab-overview -->
+
+    <!-- Tab: URLs & Domains -->
+    <div id="tab-urls" class="tab-content">
+      <div class="vt-summary-grid">
+        <div class="vt-stat-card">
+          <div class="stat-label">Total URLs</div>
+          <div class="stat-value" id="urls-total-count">--</div>
+        </div>
+        <div class="vt-stat-card">
+          <div class="stat-label">Unique Domains</div>
+          <div class="stat-value" id="urls-domain-count">--</div>
+        </div>
+        <div class="vt-stat-card danger">
+          <div class="stat-label">Unresolved DNS</div>
+          <div class="stat-value" id="urls-unresolved-count">--</div>
+        </div>
+        <div class="vt-stat-card warning">
+          <div class="stat-label">Suspicious Indicators</div>
+          <div class="stat-value" id="urls-suspicious-count">--</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="urls-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Subject</th>
+              <th>URL</th>
+              <th>Domain</th>
+              <th>DNS</th>
+              <th>Shortened</th>
+              <th>Mismatch</th>
+              <th>Risk</th>
+            </tr>
+          </thead>
+          <tbody id="urls-table-body">
+            <tr><td colspan="8" class="table-empty">Loading URL data…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div><!-- End tab-urls -->
+
+    <!-- Tab: VirusTotal -->
+    <div id="tab-virustotal" class="tab-content">
+      <div class="vt-summary-grid">
+        <div class="vt-stat-card">
+          <div class="stat-label">Scanned URLs</div>
+          <div class="stat-value" id="vt-total-urls">--</div>
+        </div>
+        <div class="vt-stat-card">
+          <div class="stat-label">Completed</div>
+          <div class="stat-value" id="vt-completed">--</div>
+        </div>
+        <div class="vt-stat-card danger">
+          <div class="stat-label">Malicious</div>
+          <div class="stat-value" id="vt-malicious-count">--</div>
+        </div>
+        <div class="vt-stat-card warning">
+          <div class="stat-label">Suspicious</div>
+          <div class="stat-value" id="vt-suspicious-count">--</div>
+        </div>
+      </div>
+      <div class="vt-results-container"></div>
+      <div id="vt-scan-id" style="display:none;"></div>
+      <div id="vt-loading" class="vt-loading-state" style="display:none;">
+        <div class="loading-skeleton"></div>
+        <p>Waiting for VirusTotal scan to complete...</p>
+      </div>
+      <div id="vt-error" class="vt-error-state" style="display:none;">
+        <p id="vt-error-msg">VirusTotal not configured</p>
+      </div>
+    </div><!-- End tab-virustotal -->
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+  /* ──────────────────────────────────────────────────────────────────────────
+     Threat History Page Logic
+  ────────────────────────────────────────────────────────────────────────── */
+  const API = window.PHISHSHIELD_API || 'http://localhost:8000';
+  const PAGE_SIZE = 20;
+
+  let allRecords   = [];
+  let filtered     = [];
+  let sortCol      = 'timestamp';
+  let sortAsc      = false;
+  let currentPage  = 1;
+
+  // ── Sample data for demo (when API is offline) ────────────────────────────
+  const DEMO_DATA = generateDemoData(40);
+
+  function generateDemoData(n) {
+    const levels   = ['CRITICAL','HIGH','MEDIUM','LOW'];
+    const subjects = [
+      'Urgent: Verify Your Account',
+      'Invoice #INV-2024-003 Attached',
+      'Your password will expire',
+      'Meeting notes from yesterday',
+      'Security alert: New sign-in',
+      'Re: Project Proposal',
+      'Your package has been shipped',
+      'Action required: Update billing',
+    ];
+    const senders = [
+      'noreply@bank-secure.xyz','admin@paypal-secure.com',
+      'hr@company.com','billing@amazon.com',
+      'no-reply@microsoft.com','updates@google.com',
+      'security@bankofamerica.xyz','newsletters@linkedin.com',
+    ];
+    const spfOpts  = ['PASS','FAIL','NONE'];
+    const dkimOpts = ['PASS','FAIL','NONE'];
+
+    return Array.from({ length: n }, (_, i) => {
+      const level   = levels[Math.floor(Math.random() * levels.length)];
+      const isPhish = level === 'CRITICAL' || level === 'HIGH';
+      const conf    = isPhish ? 0.7 + Math.random() * 0.29 : 0.5 + Math.random() * 0.49;
+      const safety  = isPhish ? Math.round((1 - conf) * 100) : Math.round(conf * 100);
+      const ts      = new Date(Date.now() - i * 1000 * 60 * (Math.random() * 30 + 5));
+      return {
+        scan_id:    `demo-${i}`,
+        timestamp:  ts.toISOString(),
+        prediction: isPhish ? 'PHISHING' : 'LEGITIMATE',
+        risk_level: level,
+        safety_score: safety,
+        confidence: parseFloat(conf.toFixed(3)),
+        email_meta: {
+          subject:  subjects[i % subjects.length],
+          sender:   senders[i % senders.length],
+          url_count: Math.floor(Math.random() * 5),
+        },
+        forensics: {
+          spf_status:  spfOpts[Math.floor(Math.random() * spfOpts.length)],
+          dkim_status: dkimOpts[Math.floor(Math.random() * dkimOpts.length)],
+        },
+        reasoning: [
+          'Urgent language detected in subject line.',
+          'Sender domain registered recently.',
+          'Suspicious shortened URL found in body.',
+        ],
+      };
+    });
+  }
+
+  // ── Load Data ─────────────────────────────────────────────────────────────
+  async function loadHistory() {
+    try {
+      const res  = await fetch(`${API}/history?limit=500`, { signal: AbortSignal.timeout(4000) });
+      const data = await res.json();
+      allRecords = data.records || [];
+      if (allRecords.length === 0) allRecords = DEMO_DATA;
+    } catch {
+      allRecords = DEMO_DATA;
+    }
+    applyFilters();
+    renderStats();
+    renderUrlsTab();
+    renderVTTab();
+  }
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
+  function renderStats() {
+    const total    = allRecords.length;
+    const phishing = allRecords.filter(r => r.prediction === 'PHISHING').length;
+    const susp     = allRecords.filter(r => r.risk_level === 'MEDIUM').length;
+    const safe     = allRecords.filter(r => r.risk_level === 'LOW').length;
+    document.getElementById('stat-total').textContent    = total;
+    document.getElementById('stat-phishing').textContent = phishing;
+    document.getElementById('stat-suspicious').textContent = susp;
+    document.getElementById('stat-safe').textContent    = safe;
+  }
+
+  // ── Filter + Sort ─────────────────────────────────────────────────────────
+  function applyFilters() {
+    const q     = document.getElementById('search-input').value.toLowerCase();
+    const level = document.getElementById('risk-filter').value;
+    const pred  = document.getElementById('pred-filter').value;
+
+    filtered = allRecords.filter(r => {
+      const meta = r.email_meta || {};
+      const matchQ = !q ||
+        (meta.subject || '').toLowerCase().includes(q) ||
+        (meta.sender  || '').toLowerCase().includes(q);
+      const matchL = !level || r.risk_level  === level;
+      const matchP = !pred  || r.prediction  === pred;
+      return matchQ && matchL && matchP;
+    });
+
+    sortData();
+    currentPage = 1;
+    renderTable();
+    renderPagination();
+  }
+
+  function sortData() {
+    filtered.sort((a, b) => {
+      let av, bv;
+      if (sortCol === 'timestamp')   { av = a.timestamp;    bv = b.timestamp; }
+      else if (sortCol === 'subject')  { av = (a.email_meta?.subject || '').toLowerCase(); bv = (b.email_meta?.subject || '').toLowerCase(); }
+      else if (sortCol === 'sender')   { av = (a.email_meta?.sender  || '').toLowerCase(); bv = (b.email_meta?.sender  || '').toLowerCase(); }
+      else if (sortCol === 'risk_level') {
+        const order = {CRITICAL:0,HIGH:1,MEDIUM:2,LOW:3};
+        av = order[a.risk_level] ?? 4; bv = order[b.risk_level] ?? 4;
+      }
+      else { av = a[sortCol]; bv = b[sortCol]; }
+      if (av < bv) return sortAsc ? -1 : 1;
+      if (av > bv) return sortAsc ?  1 : -1;
+      return 0;
+    });
+  }
+
+  // ── Render Table ──────────────────────────────────────────────────────────
+  function renderTable() {
+    const tbody = document.getElementById('table-body');
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const slice = filtered.slice(start, start + PAGE_SIZE);
+
+    if (slice.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" class="table-empty">No records match your filters.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = slice.map(r => {
+      const meta   = r.email_meta || {};
+      const for_   = r.forensics  || {};
+      const ts     = new Date(r.timestamp).toLocaleString();
+      const riskCls = `badge-${(r.risk_level||'low').toLowerCase()}`;
+      const scoreCls = r.safety_score >= 70 ? 'score-safe' : r.safety_score >= 40 ? 'score-warn' : 'score-danger';
+      const spfCls   = statusClass(for_.spf_status);
+      const dkimCls  = statusClass(for_.dkim_status);
+      return `<tr class="table-row">
+        <td class="td-time">${ts}</td>
+        <td class="td-subject" title="${esc(meta.subject)}">${esc(truncate(meta.subject, 40))}</td>
+        <td class="td-sender">${esc(meta.sender || '--')}</td>
+        <td><span class="badge ${riskCls}">${r.risk_level || '--'}</span></td>
+        <td><span class="safety-score ${scoreCls}">${r.safety_score ?? '--'}</span></td>
+        <td class="td-conf">${pct(r.confidence)}</td>
+        <td>
+          <span class="mini-badge ${spfCls}">SPF: ${for_.spf_status||'?'}</span>
+          <span class="mini-badge ${dkimCls}">DKIM: ${for_.dkim_status||'?'}</span>
+        </td>
+        <td class="td-urls">${meta.url_count ?? 0}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderPagination() {
+    const total = Math.ceil(filtered.length / PAGE_SIZE);
+    const el    = document.getElementById('pagination');
+    if (total <= 1) { el.innerHTML = ''; return; }
+    let html = '';
+    for (let i = 1; i <= total; i++) {
+      html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
+    }
+    el.innerHTML = html;
+    el.querySelectorAll('.page-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentPage = +btn.dataset.page;
+        renderTable();
+        renderPagination();
+      });
+    });
+  }
+
+  // ── Sort Headers ──────────────────────────────────────────────────────────
+  document.querySelectorAll('[data-sort]').forEach(th => {
+    th.style.cursor = 'pointer';
+    th.addEventListener('click', () => {
+      const col = th.dataset.sort;
+      if (sortCol === col) sortAsc = !sortAsc;
+      else { sortCol = col; sortAsc = false; }
+      applyFilters();
+    });
+  });
+
+  // ── Controls ──────────────────────────────────────────────────────────────
+  document.getElementById('search-input').addEventListener('input', applyFilters);
+  document.getElementById('risk-filter').addEventListener('change', applyFilters);
+  document.getElementById('pred-filter').addEventListener('change', applyFilters);
+  document.getElementById('btn-refresh').addEventListener('click', loadHistory);
+  document.getElementById('btn-clear').addEventListener('click', async () => {
+    try { await fetch(`${API}/history`, { method: 'DELETE' }); } catch {}
+    allRecords = []; filtered = [];
+    document.getElementById('table-body').innerHTML =
+      '<tr><td colspan="8" class="table-empty">History cleared.</td></tr>';
+    renderStats();
+  });
+
+  // ── Utility ───────────────────────────────────────────────────────────────
+  function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function truncate(s, n) { return s && s.length > n ? s.slice(0, n) + '…' : (s||''); }
+  function pct(v) { return v != null ? (v*100).toFixed(1)+'%' : '--'; }
+  function statusClass(s) {
+    if (s === 'PASS') return 'status-pass';
+    if (s === 'FAIL') return 'status-fail';
+    return 'status-none';
+  }
+
+  // ── URLs & Domains Tab ────────────────────────────────────────────────────
+  function renderUrlsTab() {
+    const tbody = document.getElementById('urls-table-body');
+    if (!tbody) return;
+    let allUrls = [], allDomains = new Set(), unresolvedCount = 0, suspiciousCount = 0;
+    allRecords.forEach(r => {
+      const meta = r.email_meta || {};
+      const urls = meta.urls || [];
+      const dnsResults = r.dns_results || [];
+      const struct = r.structural_indicators || {};
+      urls.forEach(url => {
+        let domain = '';
+        try { domain = new URL(url).hostname; } catch { domain = (url.split('://')[1] || url).split('/')[0]; }
+        allDomains.add(domain);
+        const dnsMatch = dnsResults.find(d => d.domain === domain);
+        const dnsStatus = dnsMatch ? (dnsMatch.resolves ? 'Resolved' : 'Unresolved') : 'Not checked';
+        if (dnsMatch && !dnsMatch.resolves) unresolvedCount++;
+        const isShort = /^(bit\.ly|tinyurl|t\.co|goo\.gl|is\.gd|rb\.gy|cutt\.ly)/i.test(domain);
+        if (isShort || struct.shortened_url_detected) suspiciousCount++;
+        allUrls.push({ ts: r.timestamp, subject: meta.subject || '--', url, domain, dnsStatus, isShort, mismatch: !!struct.domain_mismatch, risk: r.risk_level || 'LOW' });
+      });
+    });
+    document.getElementById('urls-total-count').textContent = allUrls.length;
+    document.getElementById('urls-domain-count').textContent = allDomains.size;
+    document.getElementById('urls-unresolved-count').textContent = unresolvedCount;
+    document.getElementById('urls-suspicious-count').textContent = suspiciousCount;
+    if (allUrls.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="table-empty">No URLs found in scan history.</td></tr>'; return; }
+    tbody.innerHTML = allUrls.slice(0, 100).map(u => {
+      const rCls = `badge-${u.risk.toLowerCase()}`;
+      const dCls = u.dnsStatus === 'Unresolved' ? 'warn-text' : u.dnsStatus === 'Resolved' ? 'ok-text' : '';
+      return `<tr class="table-row">
+        <td class="td-time">${new Date(u.ts).toLocaleString()}</td>
+        <td class="td-subject" title="${esc(u.subject)}">${esc(truncate(u.subject, 30))}</td>
+        <td class="mono url-cell" title="${esc(u.url)}">${esc(truncate(u.url, 40))}</td>
+        <td class="mono">${esc(u.domain)}</td>
+        <td><span class="${dCls}">${u.dnsStatus}</span></td>
+        <td>${u.isShort ? '<span class="warn-text">⚠️ Yes</span>' : '<span class="ok-text">No</span>'}</td>
+        <td>${u.mismatch ? '<span class="warn-text">⚠️ Yes</span>' : '<span class="ok-text">No</span>'}</td>
+        <td><span class="badge ${rCls}">${u.risk}</span></td></tr>`;
+    }).join('');
+  }
+
+  // ── VirusTotal Tab ────────────────────────────────────────────────────────
+  async function renderVTTab() {
+    const container = document.querySelector('.vt-results-container');
+    const errorEl = document.getElementById('vt-error');
+    const errorMsg = document.getElementById('vt-error-msg');
+    // Collect URLs from all records
+    const urlSet = new Set();
+    allRecords.forEach(r => (r.email_meta?.urls || []).forEach(u => urlSet.add(u)));
+    const allUrlsList = [...urlSet].slice(0, 20);
+    if (allUrlsList.length === 0) {
+      errorEl.style.display = 'block';
+      errorMsg.textContent = 'No URLs found in scan history for VirusTotal analysis.';
+      ['vt-total-urls','vt-completed','vt-malicious-count','vt-suspicious-count'].forEach(id => document.getElementById(id).textContent = '0');
+      return;
+    }
+    // Fetch VT reports from backend
+    let vtResults = [];
+    try {
+      const res = await fetch(`${API}/external/virustotal/report`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ urls: allUrlsList }), signal: AbortSignal.timeout(8000),
+      });
+      if (res.ok) { const d = await res.json(); vtResults = d.results || []; }
+    } catch {}
+    if (vtResults.length === 0) {
+      errorEl.style.display = 'block';
+      errorMsg.textContent = 'No VirusTotal results available. API key may not be configured in backend.';
+      ['vt-total-urls','vt-completed','vt-malicious-count','vt-suspicious-count'].forEach(id => document.getElementById(id).textContent = '0');
+      return;
+    }
+    errorEl.style.display = 'none';
+    let malT = 0, susT = 0, compC = 0;
+    vtResults.forEach(r => {
+      const s = r.stats || {};
+      malT += s.malicious || r.malicious || 0;
+      susT += s.suspicious || r.suspicious || 0;
+      if (r.status === 'completed') compC++;
+    });
+    document.getElementById('vt-total-urls').textContent = vtResults.length;
+    document.getElementById('vt-completed').textContent = compC;
+    document.getElementById('vt-malicious-count').textContent = malT;
+    document.getElementById('vt-suspicious-count').textContent = susT;
+    container.innerHTML = '';
+    vtResults.forEach(r => {
+      const s = r.stats || {}; const st = r.status || 'not_configured'; const rl = r.risk_level || 'UNKNOWN';
+      const card = document.createElement('div'); card.className = 'vt-report-card';
+      card.innerHTML = `<div class="report-header"><div class="report-url">${esc(r.url||'--')}</div><span class="report-status-pill">${esc(st)}</span></div>
+        <div class="report-stats"><div class="stat-label">Domain: ${esc(r.domain||'--')} · Risk: <span class="badge badge-${rl.toLowerCase()}">${rl}</span></div>
+        <div style="margin-top:8px"><span class="stat-badge danger">${s.malicious||0} Malicious</span> <span class="stat-badge warning">${s.suspicious||0} Suspicious</span></div></div>
+        ${r.flagged_engines?.length ? '<div class="report-engines">' + r.flagged_engines.slice(0,5).map(e => '<div class="engine-item ' + (e.category||'') + '">' + esc(e.engine_name) + ': ' + esc(e.result||e.category) + '</div>').join('') + '</div>' : ''}
+        <div class="report-footer"><div class="report-timing">${r.queue_time_ms ? 'Queue: '+r.queue_time_ms+'ms' : ''}</div>${r.permalink ? '<a href="'+esc(r.permalink)+'" target="_blank" class="btn-link">VirusTotal ↗</a>' : ''}</div>`;
+      container.appendChild(card);
+    });
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+  loadHistory();
+  initShared();
+  </script>
+</body>
+</html>

@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Forensics — PhishShield</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="shared.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7l-9-5z" fill="#00d4ff" opacity="0.9"/>
+        <path d="M10 14l-2-2 1.4-1.4L10 11.2l4.6-4.6L16 8l-6 6z" fill="#0d1117"/>
+      </svg>
+      <span class="logo-text">PhishShield</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="index.html"     class="nav-item" id="nav-threat"><span class="nav-icon">🛡</span> Threat History</a>
+      <a href="xai.html"      class="nav-item" id="nav-xai"><span class="nav-icon">📊</span> XAI Analysis</a>
+      <a href="forensics.html" class="nav-item active" id="nav-forensics"><span class="nav-icon">🔬</span> Forensics</a>
+    </nav>
+    <div class="sidebar-status">
+      <div id="api-status-dot" class="status-dot"></div>
+      <div>
+        <div class="status-label">API Status</div>
+        <div id="api-status-text" class="status-value">Checking…</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Technical Forensics</h1>
+        <p class="page-subtitle">Deep email authentication and URL path analysis</p>
+      </div>
+      <div class="header-actions">
+        <select id="scan-selector" class="filter-select" style="min-width:260px;">
+          <option value="">Select a recent scan to inspect…</option>
+        </select>
+        <button id="btn-run-vt" class="btn btn-primary" style="display:none;">🔍 Run VirusTotal Scan</button>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="forensics-empty" class="forensics-empty">
+      <div class="empty-icon">🔬</div>
+      <h3>Select a Scan</h3>
+      <p>Choose a scan record from the dropdown above to view its forensic details,<br/>
+         or scan an email first from the <a href="xai.html">XAI Analysis</a> page.</p>
+    </div>
+
+    <!-- Forensics Detail -->
+    <div id="forensics-detail" style="display:none;">
+
+      <!-- Email Header Card -->
+      <div class="forensics-grid">
+        <div class="forensics-card">
+          <div class="card-title">📧 Email Header Analysis</div>
+
+          <div class="forensics-row">
+            <div class="forensics-field">Subject</div>
+            <div class="forensics-value" id="f-subject">--</div>
+          </div>
+          <div class="forensics-row">
+            <div class="forensics-field">Sender</div>
+            <div class="forensics-value" id="f-sender">--</div>
+          </div>
+          <div class="forensics-row">
+            <div class="forensics-field">Sender Domain</div>
+            <div class="forensics-value" id="f-domain">--</div>
+          </div>
+          <div class="forensics-row">
+            <div class="forensics-field">Domain Age</div>
+            <div class="forensics-value" id="f-domain-age">--</div>
+          </div>
+          <div class="forensics-row">
+            <div class="forensics-field">Display Name Match</div>
+            <div class="forensics-value" id="f-dispname">--</div>
+          </div>
+          <div class="forensics-row">
+            <div class="forensics-field">Scan Time</div>
+            <div class="forensics-value" id="f-time">--</div>
+          </div>
+          <div class="forensics-row">
+            <div class="forensics-field">Scan ID</div>
+            <div class="forensics-value mono" id="f-scanid">--</div>
+          </div>
+        </div>
+
+        <!-- Auth Card -->
+        <div class="forensics-card">
+          <div class="card-title">🔐 Email Authentication</div>
+          <p class="card-subtitle">Email authentication headers determine sender legitimacy</p>
+
+          <div class="auth-grid">
+            <!-- SPF -->
+            <div class="auth-item">
+              <div class="auth-label">SPF</div>
+              <div id="spf-badge" class="auth-badge">--</div>
+              <div class="auth-desc">Sender Policy Framework — verifies the sending server is authorised</div>
+            </div>
+            <!-- DKIM -->
+            <div class="auth-item">
+              <div class="auth-label">DKIM</div>
+              <div id="dkim-badge" class="auth-badge">--</div>
+              <div class="auth-desc">Domain Keys — cryptographic signature confirming message integrity</div>
+            </div>
+            <!-- DMARC -->
+            <div class="auth-item">
+              <div class="auth-label">DMARC</div>
+              <div id="dmarc-badge" class="auth-badge">--</div>
+              <div class="auth-desc">Alignment policy — enforces SPF and DKIM together</div>
+            </div>
+          </div>
+
+          <!-- Auth Score -->
+          <div class="auth-score-row">
+            <span class="auth-score-label">Authentication Score</span>
+            <div class="auth-score-bar-wrap">
+              <div id="auth-score-bar" class="auth-score-bar"></div>
+            </div>
+            <span id="auth-score-num" class="auth-score-num">--/3</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- URL Analysis Table -->
+      <div class="forensics-card mt-16">
+        <div class="card-title">🔗 URL Path Analysis</div>
+        <p class="card-subtitle">Each link found in the email, analysed for risk indicators</p>
+
+        <div id="url-table-wrap">
+          <table class="data-table url-table">
+            <thead>
+              <tr>
+                <th>URL</th>
+                <th>Domain</th>
+                <th>Risk</th>
+                <th>Reason</th>
+                <th>Shortened</th>
+              </tr>
+            </thead>
+            <tbody id="url-table-body">
+              <tr><td colspan="5" class="table-empty">No URLs found in this email.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Reasoning Section -->
+      <div class="forensics-card mt-16">
+        <div class="card-title">🧠 AI Reasoning</div>
+        <div id="f-reasoning-list" class="reasoning-cards-grid"></div>
+      </div>
+
+      <!-- DNS Verification Section -->
+      <div class="forensics-card mt-16" id="f-dns-section" style="display:none;">
+        <div class="card-title">🌐 DNS Verification</div>
+        <p class="card-subtitle">Domain resolution status for URLs and sender</p>
+        <div id="f-dns-list"></div>
+      </div>
+
+      <!-- Trust Analysis Section -->
+      <div class="forensics-card mt-16" id="f-trust-section" style="display:none;">
+        <div class="card-title">🛡 Trust Analysis</div>
+        <div id="f-trust-details"></div>
+      </div>
+
+      <!-- VirusTotal Section -->
+      <div class="forensics-card mt-16" id="f-vt-section" style="display:none;">
+        <div class="card-title">🧪 VirusTotal Report</div>
+        <p class="card-subtitle" id="f-vt-status">Not scanned</p>
+        <div id="f-vt-results" class="vt-results-container"></div>
+      </div>
+
+      <!-- Recommendation Section -->
+      <div class="forensics-card mt-16">
+        <div class="card-title">📋 Forensic Recommendation</div>
+        <div class="forensics-row"><div class="forensics-field">Prediction</div><div class="forensics-value" id="f-prediction">--</div></div>
+        <div class="forensics-row"><div class="forensics-field">Safety Score</div><div class="forensics-value" id="f-safety">--</div></div>
+        <div class="forensics-row"><div class="forensics-field">Action</div><div class="forensics-value" id="f-action">--</div></div>
+      </div>
+
+    </div><!-- /forensics-detail -->
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+  /* ──────────────────────────────────────────────────────────────────────────
+     Forensics Page Logic
+  ────────────────────────────────────────────────────────────────────────── */
+  const API = window.PHISHSHIELD_API || 'http://localhost:8000';
+  let records = [];
+
+  async function loadHistory() {
+    try {
+      const res  = await fetch(`${API}/history?limit=200`, { signal: AbortSignal.timeout(4000) });
+      const data = await res.json();
+      records = data.records || [];
+      console.log('[Forensics] Loaded', records.length, 'records from API');
+    } catch (e) {
+      console.warn('[Forensics] API fetch failed:', e);
+      records = [];
+    }
+    if (records.length === 0) {
+      console.log('[Forensics] No API records, using demo data');
+      records = generateDemoForensics();
+    }
+    populateSelector();
+    console.log('[Forensics] Selector populated with', records.length, 'options');
+  }
+
+  function generateDemoForensics() {
+    return [
+      {
+        scan_id: 'demo-f-001', timestamp: new Date().toISOString(),
+        prediction: 'PHISHING', risk_level: 'CRITICAL', safety_score: 8, confidence: 0.95,
+        email_meta: { subject: 'Urgent: Verify Your Account', sender: 'noreply@secure-bank.xyz', url_count: 2 },
+        forensics: {
+          spf_status: 'FAIL', dkim_status: 'NONE', dmarc_status: 'FAIL',
+          domain_age_days: 12, sender_domain: 'secure-bank.xyz', display_name_mismatch: true,
+          url_analysis: [
+            { url: 'https://bit.ly/verify-bank', domain: 'bit.ly', risk: 'HIGH', reason: 'Shortened URL hides true destination', is_shortened: true },
+            { url: 'https://secure-bank.xyz/login', domain: 'secure-bank.xyz', risk: 'HIGH', reason: 'Domain registered 12 days ago', is_shortened: false },
+          ],
+        },
+        reasoning: [
+          'Sender domain "secure-bank.xyz" was registered only 12 days ago.',
+          'SPF check FAILED — sending server not authorised by domain.',
+          'Email contains a shortened URL (bit.ly) masking the true destination.',
+        ],
+      },
+      {
+        scan_id: 'demo-f-002', timestamp: new Date(Date.now() - 180000).toISOString(),
+        prediction: 'LEGITIMATE', risk_level: 'LOW', safety_score: 94, confidence: 0.94,
+        email_meta: { subject: 'Your July Statement', sender: 'statements@mybank.com', url_count: 1 },
+        forensics: {
+          spf_status: 'PASS', dkim_status: 'PASS', dmarc_status: 'PASS',
+          domain_age_days: 4200, sender_domain: 'mybank.com', display_name_mismatch: false,
+          url_analysis: [
+            { url: 'https://mybank.com/statements/july', domain: 'mybank.com', risk: 'LOW', reason: 'Known legitimate bank domain', is_shortened: false },
+          ],
+        },
+        reasoning: [
+          'All authentication checks (SPF, DKIM, DMARC) passed.',
+          'Sender domain "mybank.com" is over 11 years old.',
+          'No suspicious URLs or urgent keywords detected.',
+        ],
+      },
+    ];
+  }
+
+  function populateSelector() {
+    const sel = document.getElementById('scan-selector');
+    sel.innerHTML = '<option value="">Select a recent scan to inspect…</option>';
+    records.forEach((r, i) => {
+      const meta  = r.email_meta || {};
+      const subj  = truncate(meta.subject || 'Unknown', 35);
+      const level = r.risk_level || '?';
+      const icon  = level === 'CRITICAL' || level === 'HIGH' ? '🔴' : level === 'MEDIUM' ? '🟡' : '🟢';
+      const opt   = document.createElement('option');
+      opt.value       = i;
+      opt.textContent = `${icon} ${subj} — ${meta.sender || '?'}`;
+      sel.appendChild(opt);
+    });
+  }
+
+  // Scan selector change handler is defined in the enhanced section below
+
+  function renderForensics(r) {
+    document.getElementById('forensics-empty').style.display  = 'none';
+    document.getElementById('forensics-detail').style.display = 'block';
+
+    const meta = r.email_meta  || {};
+    // Build forensics from real API data if r.forensics is missing
+    let for_ = r.forensics || {};
+    if (!r.forensics) {
+      const struct = r.structural_indicators || {};
+      const dns = r.dns_results || [];
+      const sender = meta.sender || '';
+      const senderDomain = sender.includes('@') ? sender.split('@')[1] : '';
+      for_ = {
+        sender_domain: senderDomain,
+        domain_age_days: null,
+        display_name_mismatch: !!struct.domain_mismatch,
+        spf_status: 'UNKNOWN', dkim_status: 'UNKNOWN', dmarc_status: 'UNKNOWN',
+        url_analysis: (meta.urls || []).map(url => {
+          let domain = ''; try { domain = new URL(url).hostname; } catch { domain = (url.split('://')[1]||url).split('/')[0]; }
+          const dnsMatch = dns.find(d => d.domain === domain);
+          const isShort = /^(bit\.ly|tinyurl|t\.co|goo\.gl|is\.gd)/i.test(domain);
+          return { url, domain, risk: r.risk_level || 'LOW', reason: dnsMatch && !dnsMatch.resolves ? 'DNS unresolved' : (isShort ? 'Shortened URL' : 'Extracted from email'), is_shortened: isShort };
+        }),
+      };
+    }
+
+    // Header fields
+    document.getElementById('f-subject').textContent     = meta.subject    || '--';
+    document.getElementById('f-sender').textContent      = meta.sender     || '--';
+    document.getElementById('f-domain').textContent      = for_.sender_domain || '--';
+    document.getElementById('f-domain-age').innerHTML    = for_.domain_age_days != null
+      ? `${for_.domain_age_days} days ${for_.domain_age_days < 90 ? '<span class="warn-text">⚠️ Newly registered</span>' : '✔ Established'}`
+      : '--';
+    document.getElementById('f-dispname').innerHTML      = for_.display_name_mismatch
+      ? '<span class="warn-text">⚠️ Mismatch detected</span>'
+      : '<span class="ok-text">✔ No mismatch</span>';
+    document.getElementById('f-time').textContent        = new Date(r.timestamp).toLocaleString();
+    document.getElementById('f-scanid').textContent      = r.scan_id || '--';
+
+    // Auth badges
+    renderAuthBadge('spf-badge',   for_.spf_status);
+    renderAuthBadge('dkim-badge',  for_.dkim_status);
+    renderAuthBadge('dmarc-badge', for_.dmarc_status);
+
+    const authScore = [for_.spf_status, for_.dkim_status, for_.dmarc_status].filter(s => s === 'PASS').length;
+    const bar       = document.getElementById('auth-score-bar');
+    bar.style.width = `${(authScore / 3) * 100}%`;
+    bar.style.background = authScore === 3 ? '#30d158' : authScore >= 1 ? '#ffd60a' : '#ff453a';
+    document.getElementById('auth-score-num').textContent = `${authScore}/3`;
+
+    // URL Table
+    const tbody = document.getElementById('url-table-body');
+    if (for_.url_analysis?.length > 0) {
+      tbody.innerHTML = for_.url_analysis.map(u => {
+        const riskCls = `badge-${(u.risk||'low').toLowerCase()}`;
+        return `<tr>
+          <td class="mono url-cell" title="${esc(u.url)}">${esc(truncate(u.url, 45))}</td>
+          <td class="mono">${esc(u.domain || '--')}</td>
+          <td><span class="badge ${riskCls}">${u.risk || '--'}</span></td>
+          <td>${esc(u.reason || '--')}</td>
+          <td>${u.is_shortened ? '<span class="warn-text">⚠️ Yes</span>' : '<span class="ok-text">No</span>'}</td>
+        </tr>`;
+      }).join('');
+    } else {
+      tbody.innerHTML = '<tr><td colspan="5" class="table-empty">No URLs found in this email.</td></tr>';
+    }
+
+    // Reasoning
+    const rl   = document.getElementById('f-reasoning-list');
+    const icons = ['🔍','⚠️','🌐'];
+    rl.innerHTML = (r.reasoning || []).slice(0,3).map((reason, i) => `
+      <div class="reason-card">
+        <div class="reason-icon">${icons[i] || '▸'}</div>
+        <div class="reason-text">${esc(reason)}</div>
+      </div>
+    `).join('');
+  }
+
+  function renderAuthBadge(id, status) {
+    const el  = document.getElementById(id);
+    el.textContent = status || 'UNKNOWN';
+    el.className   = `auth-badge auth-${(status||'none').toLowerCase()}`;
+  }
+
+  function esc(s) {
+    return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function truncate(s, n) { return s && s.length > n ? s.slice(0, n) + '…' : (s||''); }
+
+  loadHistory();
+  initShared();
+
+  // ── Enhanced Forensics Rendering ─────────────────────────────────────────────
+  let selectedRecord = null;
+
+  // Override selector change to also render new sections
+  document.getElementById('scan-selector').addEventListener('change', function () {
+    const idx = this.value;
+    if (idx === '') {
+      document.getElementById('forensics-empty').style.display = 'flex';
+      document.getElementById('forensics-detail').style.display = 'none';
+      document.getElementById('btn-run-vt').style.display = 'none';
+      selectedRecord = null;
+      return;
+    }
+    selectedRecord = records[+idx];
+    renderForensics(selectedRecord);
+    renderDNSSection(selectedRecord);
+    renderTrustSection(selectedRecord);
+    renderRecommendation(selectedRecord);
+    // Show VT button if URLs exist
+    const urls = selectedRecord.email_meta?.urls || [];
+    document.getElementById('btn-run-vt').style.display = urls.length > 0 ? 'inline-block' : 'none';
+    // Reset VT section
+    document.getElementById('f-vt-section').style.display = 'none';
+  }, false);
+
+  function renderDNSSection(r) {
+    const section = document.getElementById('f-dns-section');
+    const list = document.getElementById('f-dns-list');
+    const dnsResults = r.dns_results || [];
+    if (dnsResults.length === 0) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    list.innerHTML = dnsResults.map(d => `<div class="forensics-row">
+      <div class="forensics-field mono">${esc(d.domain || '--')}</div>
+      <div class="forensics-value">${d.resolves ? '<span class="ok-text">✔ Resolved</span>' + (d.ip ? ' (' + esc(d.ip) + ')' : '')
+        : '<span class="warn-text">⚠️ Unresolved</span>'}</div>
+    </div>`).join('');
+  }
+
+  function renderTrustSection(r) {
+    const section = document.getElementById('f-trust-section');
+    const details = document.getElementById('f-trust-details');
+    const trust = r.trust_analysis || {};
+    if (!trust.trust_score && trust.trust_score !== 0) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    const sender = trust.sender_trust || {};
+    details.innerHTML = `
+      <div class="forensics-row"><div class="forensics-field">Trust Score</div><div class="forensics-value">${(trust.trust_score * 100).toFixed(0)}%</div></div>
+      <div class="forensics-row"><div class="forensics-field">Trusted Sender</div><div class="forensics-value">${trust.is_trusted_sender ? '<span class="ok-text">✔ Yes</span>' : '<span class="warn-text">No</span>'}</div></div>
+      ${sender.category ? '<div class="forensics-row"><div class="forensics-field">Category</div><div class="forensics-value">' + esc(sender.category) + '</div></div>' : ''}
+      ${(trust.warnings || []).length > 0 ? '<div class="forensics-row"><div class="forensics-field">Warnings</div><div class="forensics-value warn-text">' + trust.warnings.map(w => esc(w)).join('<br>') + '</div></div>' : ''}
+      ${(trust.brand_impersonation || []).length > 0 ? '<div class="forensics-row"><div class="forensics-field">Brand Impersonation</div><div class="forensics-value warn-text">⚠️ ' + trust.brand_impersonation.map(b => esc(b.brand)).join(', ') + '</div></div>' : ''}
+    `;
+  }
+
+  function renderRecommendation(r) {
+    document.getElementById('f-prediction').textContent = r.phishing ? '⚠️ PHISHING' : '✔ LEGITIMATE';
+    document.getElementById('f-safety').textContent = r.safety_score != null ? r.safety_score + '/100' : '--';
+    document.getElementById('f-action').textContent = r.recommended_action || '--';
+  }
+
+  // ── VirusTotal Scan Button ───────────────────────────────────────────────
+  document.getElementById('btn-run-vt').addEventListener('click', async () => {
+    if (!selectedRecord) return;
+    const urls = selectedRecord.email_meta?.urls || [];
+    if (urls.length === 0) { alert('No URLs found in this scan.'); return; }
+
+    const btn = document.getElementById('btn-run-vt');
+    const vtSection = document.getElementById('f-vt-section');
+    const vtStatus = document.getElementById('f-vt-status');
+    const vtResults = document.getElementById('f-vt-results');
+
+    btn.textContent = '⏳ Submitting…'; btn.disabled = true;
+    vtSection.style.display = 'block';
+    vtStatus.textContent = 'Submitting URLs to VirusTotal via backend…';
+    vtResults.innerHTML = '';
+
+    // Submit URLs to backend
+    try {
+      const submitRes = await fetch(`${API}/external/virustotal/submit`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ urls: urls.slice(0, 10) }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const submitData = await submitRes.json();
+
+      if (submitData.error) {
+        vtStatus.textContent = submitData.error === 'VirusTotal API key not configured'
+          ? 'VirusTotal API key is not configured in backend.'
+          : 'Error: ' + submitData.error;
+        btn.textContent = '🔍 Run VirusTotal Scan'; btn.disabled = false;
+        return;
+      }
+
+      vtStatus.textContent = 'Submitted. Polling for results…';
+      btn.textContent = '⏳ Polling…';
+
+      // Now fetch reports by polling
+      let attempts = 0;
+      const maxAttempts = 12;
+      const pollInterval = setInterval(async () => {
+        attempts++;
+        if (attempts > maxAttempts) {
+          clearInterval(pollInterval);
+          vtStatus.textContent = 'Polling timed out. Some results may still be processing.';
+          btn.textContent = '🔍 Run VirusTotal Scan'; btn.disabled = false;
+          return;
+        }
+        try {
+          const reportRes = await fetch(`${API}/external/virustotal/report`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ urls: urls.slice(0, 10) }),
+            signal: AbortSignal.timeout(8000),
+          });
+          if (!reportRes.ok) return;
+          const reportData = await reportRes.json();
+          const results = reportData.results || [];
+
+          // Check if all completed
+          const allDone = results.every(r => r.status === 'completed' || r.status === 'not_configured' || r.status === 'failed');
+
+          // Render results
+          vtResults.innerHTML = '';
+          results.forEach(r => {
+            const s = r.stats || {};
+            const st = r.status || 'unknown';
+            const rl = r.risk_level || 'UNKNOWN';
+            const card = document.createElement('div'); card.className = 'vt-report-card';
+            card.innerHTML = `<div class="report-header"><div class="report-url">${esc(r.url||'--')}</div><span class="report-status-pill">${esc(st)}</span></div>
+              <div class="report-stats"><div class="stat-label">Domain: ${esc(r.domain||'--')} · Risk: <span class="badge badge-${rl.toLowerCase()}">${rl}</span></div>
+              <div style="margin-top:8px"><span class="stat-badge danger">${s.malicious||0} Malicious</span> <span class="stat-badge warning">${s.suspicious||0} Suspicious</span>
+              <span class="mini-badge status-pass">${s.harmless||0} Harmless</span> <span class="mini-badge status-none">${s.undetected||0} Undetected</span></div></div>
+              ${r.flagged_engines?.length ? '<div class="report-engines">' + r.flagged_engines.slice(0,5).map(e => '<div class="engine-item '+(e.category||'')+'">' + esc(e.engine_name) + ': ' + esc(e.result||e.category) + '</div>').join('') + '</div>' : ''}
+              <div class="report-footer"><div class="report-timing">${r.queue_time_ms ? 'Queue: '+r.queue_time_ms+'ms' : ''}</div>${r.permalink ? '<a href="'+esc(r.permalink)+'" target="_blank" class="btn-link">VirusTotal ↗</a>' : ''}</div>`;
+            vtResults.appendChild(card);
+          });
+
+          vtStatus.textContent = `${results.filter(r=>r.status==='completed').length}/${results.length} completed` + (allDone ? '' : ' (polling…)');
+
+          if (allDone) {
+            clearInterval(pollInterval);
+            btn.textContent = '🔍 Run VirusTotal Scan'; btn.disabled = false;
+          }
+        } catch {}
+      }, 5000);
+
+    } catch (err) {
+      vtStatus.textContent = 'Error connecting to backend: ' + err.message;
+      btn.textContent = '🔍 Run VirusTotal Scan'; btn.disabled = false;
+    }
+  });
+  </script>
+</body>
+</html>

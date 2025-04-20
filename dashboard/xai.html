@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XAI Analysis — PhishShield</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="shared.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7l-9-5z" fill="#00d4ff" opacity="0.9"/>
+        <path d="M10 14l-2-2 1.4-1.4L10 11.2l4.6-4.6L16 8l-6 6z" fill="#0d1117"/>
+      </svg>
+      <span class="logo-text">PhishShield</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="index.html"     class="nav-item" id="nav-threat"><span class="nav-icon">🛡</span> Threat History</a>
+      <a href="xai.html"      class="nav-item active" id="nav-xai"><span class="nav-icon">📊</span> XAI Analysis</a>
+      <a href="forensics.html" class="nav-item" id="nav-forensics"><span class="nav-icon">🔬</span> Forensics</a>
+    </nav>
+    <div class="sidebar-status">
+      <div id="api-status-dot" class="status-dot"></div>
+      <div>
+        <div class="status-label">API Status</div>
+        <div id="api-status-text" class="status-value">Checking…</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Explainable AI (XAI) Analysis</h1>
+        <p class="page-subtitle">Feature importance driving the phishing detection model</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-ghost" id="btn-refresh-xai">↺ Refresh</button>
+      </div>
+    </div>
+
+    <!-- Scan Tester Card -->
+    <div class="xai-scan-card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <h3 class="card-title" id="scan-card-title">🔍 Live Email Scanner</h3>
+          <p class="card-subtitle" id="scan-card-subtitle">Paste email details to see XAI breakdown in real-time</p>
+        </div>
+        <div id="gmail-source-badge" style="display:none;">
+          <span style="
+            background: rgba(0,212,255,0.12); border: 1px solid rgba(0,212,255,0.4);
+            color: #00d4ff; font-size: 11px; font-weight: 700; padding: 4px 12px;
+            border-radius: 20px; letter-spacing: 0.5px; white-space: nowrap;
+          ">📡 From Gmail</span>
+        </div>
+      </div>
+      <div class="scan-form">
+        <div class="form-row">
+          <input id="xai-subject" class="form-input" placeholder="Subject line…" />
+          <input id="xai-sender"  class="form-input" placeholder="Sender email…" />
+        </div>
+        <textarea id="xai-body" class="form-textarea" rows="3"
+          placeholder="Email body…"></textarea>
+        <input id="xai-urls" class="form-input" placeholder="Comma-separated URLs (optional)" />
+        <div style="display:flex; gap:8px;">
+          <button id="btn-scan-xai" class="btn btn-primary" style="flex:1;">⚡ Scan &amp; Explain</button>
+          <button id="btn-auto-extract" class="btn btn-ghost" title="Auto-fill from latest extension scan">📡 Auto Extract</button>
+          <button id="btn-clear-form" class="btn btn-ghost" title="Clear form and enter manually">✕ Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Row -->
+    <div class="xai-results" id="xai-results" style="display:none;">
+      <!-- Gauge -->
+      <div class="xai-gauge-card">
+        <div class="card-title">Risk Gauge</div>
+        <div class="gauge-container">
+          <svg class="gauge-svg" viewBox="0 0 200 120">
+            <path d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="#1e2d40" stroke-width="18" stroke-linecap="round"/>
+            <path id="xai-gauge-fill" d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="#00d4ff" stroke-width="18"
+                  stroke-linecap="round" stroke-dasharray="0 251"/>
+          </svg>
+          <div class="gauge-center">
+            <div id="xai-score" class="gauge-score">--</div>
+            <div class="gauge-unit">Safety Score</div>
+          </div>
+        </div>
+        <div id="xai-verdict" class="xai-verdict">--</div>
+        <div id="xai-risk-badge" class="badge">--</div>
+      </div>
+
+      <!-- Feature Importance Bar Chart -->
+      <div class="xai-chart-card">
+        <div class="card-title">Feature Importance</div>
+        <div class="card-subtitle">Why the model made this decision</div>
+        <div class="chart-wrap">
+          <canvas id="feature-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full History XAI -->
+    <div class="xai-history-section">
+      <h3 class="section-title">📈 Aggregate Feature Importance</h3>
+      <p class="section-subtitle">Average feature weights across all recent phishing detections</p>
+      <div class="chart-wrap chart-wrap-large">
+        <canvas id="aggregate-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Reasoning Cards -->
+    <div id="reasoning-cards" class="reasoning-section" style="display:none;">
+      <h3 class="section-title">🧠 AI Reasoning</h3>
+      <div id="reasoning-list" class="reasoning-cards-grid"></div>
+    </div>
+
+    <!-- Detail Sections -->
+    <div id="xai-details" style="display:none;">
+      <div class="forensics-grid" style="margin-bottom:16px;">
+        <div class="forensics-card">
+          <div class="card-title">📧 Email Metadata</div>
+          <div class="forensics-row"><div class="forensics-field">Subject</div><div class="forensics-value" id="xd-subject">--</div></div>
+          <div class="forensics-row"><div class="forensics-field">Sender</div><div class="forensics-value" id="xd-sender">--</div></div>
+          <div class="forensics-row"><div class="forensics-field">Reply-To</div><div class="forensics-value" id="xd-replyto">--</div></div>
+          <div class="forensics-row"><div class="forensics-field">Timestamp</div><div class="forensics-value" id="xd-timestamp">--</div></div>
+          <div class="forensics-row"><div class="forensics-field">URL Count</div><div class="forensics-value" id="xd-urlcount">--</div></div>
+        </div>
+        <div class="forensics-card">
+          <div class="card-title">📝 Text Analysis</div>
+          <div class="forensics-row"><div class="forensics-field">Body Length</div><div class="forensics-value" id="xd-bodylen">--</div></div>
+          <div class="forensics-row"><div class="forensics-field">Subject Length</div><div class="forensics-value" id="xd-subjlen">--</div></div>
+          <div class="forensics-row"><div class="forensics-field">Urgency Score</div><div class="forensics-value" id="xd-urgency">--</div></div>
+          <div class="forensics-row"><div class="forensics-field">Sensitive Keywords</div><div class="forensics-value" id="xd-sensitive">--</div></div>
+          <div class="forensics-row"><div class="forensics-field">Domain Mismatch</div><div class="forensics-value" id="xd-mismatch">--</div></div>
+        </div>
+      </div>
+      <div class="forensics-grid">
+        <div class="forensics-card">
+          <div class="card-title">🔗 URL Analysis</div>
+          <div id="xd-url-list" style="font-size:12px;color:var(--text-dim);">No URLs</div>
+        </div>
+        <div class="forensics-card">
+          <div class="card-title">🛡 Model Explanation</div>
+          <div class="forensics-row"><div class="forensics-field">Prediction</div><div class="forensics-value" id="xd-prediction">--</div></div>
+          <div class="forensics-row"><div class="forensics-field">Confidence</div><div class="forensics-value" id="xd-confidence">--</div></div>
+          <div class="forensics-row"><div class="forensics-field">Safety Score</div><div class="forensics-value" id="xd-safety">--</div></div>
+          <div class="forensics-row"><div class="forensics-field">Risk Level</div><div class="forensics-value" id="xd-risk">--</div></div>
+          <div class="forensics-row"><div class="forensics-field">DNS Summary</div><div class="forensics-value" id="xd-dns">--</div></div>
+          <div class="forensics-row"><div class="forensics-field">Trust Score</div><div class="forensics-value" id="xd-trust">--</div></div>
+          <div class="forensics-row"><div class="forensics-field">VT Status</div><div class="forensics-value" id="xd-vtstatus">--</div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+  /* ──────────────────────────────────────────────────────────────────────────
+     XAI Analysis Page — auto-loads data from Gmail via ?data= URL param
+  ────────────────────────────────────────────────────────────────────────── */
+  const API = window.PHISHSHIELD_API || 'http://localhost:8000';
+  Chart.defaults.color = '#64748b';
+  Chart.defaults.font.family = 'Inter, sans-serif';
+
+  let featureChart   = null;
+  let aggregateChart = null;
+
+  // ── URL Param Parser ──────────────────────────────────────────────────────
+  function getGmailPayload() {
+    try {
+      const raw = new URLSearchParams(window.location.search).get('data');
+      if (!raw) return null;
+      return JSON.parse(decodeURIComponent(escape(atob(raw))));
+    } catch (e) {
+      console.warn('[PhishShield] Could not decode URL payload:', e);
+      return null;
+    }
+  }
+
+  // ── Fill form fields from Gmail email data ────────────────────────────────
+  function fillFormFromGmail(emailData) {
+    if (!emailData) return;
+    const meta = emailData.email_meta || {};
+    document.getElementById('xai-subject').value = emailData.subject   || meta.subject   || '';
+    document.getElementById('xai-sender').value  = emailData.from_email || meta.sender   || '';
+    document.getElementById('xai-body').value    = emailData.body      || '';
+    document.getElementById('xai-urls').value    = (emailData.urls || []).join(', ');
+  }
+
+  // ── Render result (shared by auto-load and manual scan) ───────────────────
+  function renderResult(data) {
+    document.getElementById('xai-results').style.display = 'grid';
+
+    drawGauge(data.safety_score ?? 50, data.risk_level ?? 'LOW');
+
+    const level     = (data.risk_level || 'LOW').toUpperCase();
+    const verdictEl = document.getElementById('xai-verdict');
+    const badgeEl   = document.getElementById('xai-risk-badge');
+    verdictEl.textContent = data.prediction === 'PHISHING' ? '⚠️ PHISHING DETECTED' : '✔ EMAIL APPEARS SAFE';
+    verdictEl.style.color = level === 'CRITICAL' || level === 'HIGH' ? '#ff453a'
+                          : level === 'MEDIUM'   ? '#ffd60a' : '#30d158';
+    badgeEl.textContent = level;
+    badgeEl.className   = `badge badge-${level.toLowerCase()}`;
+
+    if (data.xai_features?.length) drawFeatureChart(data.xai_features);
+
+    const rCards = document.getElementById('reasoning-cards');
+    const rList  = document.getElementById('reasoning-list');
+    if (data.reasoning?.length) {
+      rCards.style.display = 'block';
+      const icons = ['🔍','⚠️','🌐'];
+      rList.innerHTML = data.reasoning.slice(0,3).map((r, i) => `
+        <div class="reason-card">
+          <div class="reason-icon">${icons[i] || '▸'}</div>
+          <div class="reason-text">${r}</div>
+        </div>
+      `).join('');
+    }
+  }
+
+  // ── Charts ────────────────────────────────────────────────────────────────
+  function drawAggregateChart(features) {
+    const ctx = document.getElementById('aggregate-chart').getContext('2d');
+    if (aggregateChart) aggregateChart.destroy();
+    const labels = features.map(f => f.feature);
+    const values = features.map(f => Math.round(f.weight * 100));
+    const colors = features.map(f =>
+      f.direction === 'phishing' ? 'rgba(255,69,58,0.8)' : 'rgba(48,209,88,0.8)'
+    );
+    aggregateChart = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Feature Weight (%)', data: values,
+        backgroundColor: colors, borderColor: colors.map(c=>c.replace('0.8','1')),
+        borderWidth: 1, borderRadius: 4 }] },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false },
+          tooltip: { callbacks: {
+            label: c => ` ${c.parsed.x}% influence`,
+            afterLabel: c => features[c.dataIndex].direction === 'phishing'
+              ? '▲ Pushes toward PHISHING' : '▼ Pushes toward LEGITIMATE',
+          }}},
+        scales: {
+          x: { grid: { color: '#1e2d40' }, ticks: { callback: v => v+'%' }, max: 100 },
+          y: { grid: { display: false } },
+        },
+      },
+    });
+  }
+
+  function drawFeatureChart(features) {
+    const ctx = document.getElementById('feature-chart').getContext('2d');
+    if (featureChart) featureChart.destroy();
+    const labels = features.map(f => f.feature);
+    const values = features.map(f => Math.round(f.weight * 100));
+    const colors = features.map(f =>
+      f.direction === 'phishing'
+        ? `rgba(255,69,58,${0.4 + f.weight * 0.6})`
+        : `rgba(48,209,88,${0.4 + f.weight * 0.6})`
+    );
+    featureChart = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Weight', data: values,
+        backgroundColor: colors, borderColor: colors.map(c=>c.replace(/,[0-9.]+\)$/,',1)')),
+        borderWidth: 1, borderRadius: 4 }] },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: '#1e2d40' }, ticks: { callback: v => v+'%' }, max: 100 },
+          y: { grid: { display: false } },
+        },
+      },
+    });
+  }
+
+  function drawGauge(score, level) {
+    const ARC_LEN  = 251;
+    const fill     = (score / 100) * ARC_LEN;
+    const gaugeFill = document.getElementById('xai-gauge-fill');
+    const color = level === 'CRITICAL' || level === 'HIGH' ? '#ff453a'
+                : level === 'MEDIUM' ? '#ffd60a' : '#30d158';
+    gaugeFill.style.stroke          = color;
+    gaugeFill.style.strokeDasharray = `${fill} ${ARC_LEN}`;
+    let cur = 0;
+    const t = setInterval(() => {
+      cur = Math.min(cur + 2, score);
+      document.getElementById('xai-score').textContent = cur;
+      if (cur >= score) clearInterval(t);
+    }, 18);
+  }
+
+  // ── Manual Scan Button ────────────────────────────────────────────────────
+  document.getElementById('btn-scan-xai').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-scan-xai');
+    btn.textContent = '⏳ Scanning…'; btn.disabled = true;
+    try {
+      const res  = await fetch(`${API}/predict`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject:    document.getElementById('xai-subject').value,
+          from_email: document.getElementById('xai-sender').value,
+          body:       document.getElementById('xai-body').value,
+          urls:       document.getElementById('xai-urls').value
+                        .split(',').map(u => u.trim()).filter(Boolean),
+        }),
+      });
+      renderResult(await res.json());
+    } catch (err) {
+      alert('API Error: ' + err.message + '\n\nMake sure the PhishShield server is running.');
+    } finally {
+      btn.textContent = '⚡ Scan & Explain'; btn.disabled = false;
+    }
+  });
+
+  // ── Clear Button ──────────────────────────────────────────────────────────
+  document.getElementById('btn-clear-form').addEventListener('click', () => {
+    ['xai-subject','xai-sender','xai-body','xai-urls'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('xai-results').style.display  = 'none';
+    document.getElementById('reasoning-cards').style.display = 'none';
+    document.getElementById('gmail-source-badge').style.display = 'none';
+    document.getElementById('scan-card-subtitle').textContent = 'Paste email details to see XAI breakdown in real-time';
+    // Remove data param from URL without reload
+    window.history.replaceState({}, '', window.location.pathname);
+  });
+
+  // ── Aggregate XAI Chart ───────────────────────────────────────────────────
+  async function loadAggregateXAI() {
+    const defaultFeatures = [
+      { feature: 'Suspicious URLs',         weight: 0.82, direction: 'phishing' },
+      { feature: 'New / Unknown Domain',    weight: 0.74, direction: 'phishing' },
+      { feature: 'Urgent Language Tone',    weight: 0.65, direction: 'phishing' },
+      { feature: 'SPF / DKIM Failure',      weight: 0.58, direction: 'phishing' },
+      { feature: 'Brand Impersonation',     weight: 0.52, direction: 'phishing' },
+      { feature: 'Sensitive Keyword Count', weight: 0.44, direction: 'phishing' },
+    ];
+    try {
+      const res  = await fetch(`${API}/history?limit=100`, { signal: AbortSignal.timeout(3000) });
+      const data = await res.json();
+      const records = (data.records || []).filter(r => r.xai_features?.length > 0);
+      if (records.length > 0) {
+        const featureMap = {};
+        records.forEach(r => r.xai_features.forEach(f => {
+          if (!featureMap[f.feature]) featureMap[f.feature] = { total:0, count:0, direction:f.direction };
+          featureMap[f.feature].total += f.weight;
+          featureMap[f.feature].count++;
+        }));
+        const aggregated = Object.entries(featureMap)
+          .map(([feature, d]) => ({ feature, weight: d.total/d.count, direction: d.direction }))
+          .sort((a,b) => b.weight - a.weight).slice(0, 8);
+        drawAggregateChart(aggregated);
+        return;
+      }
+    } catch {}
+    drawAggregateChart(defaultFeatures);
+  }
+
+  document.getElementById('btn-refresh-xai').addEventListener('click', loadAggregateXAI);
+
+  // ── BOOT: Auto-load Gmail payload if ?data= present ───────────────────────
+  (function boot() {
+    const payload = getGmailPayload();
+
+    if (payload?.source === 'gmail-extension' && payload.result) {
+      // ── Arrived from Gmail Extension ─────────────────────────────────────
+      const result    = payload.result;
+      const emailData = payload.emailData;  // raw email from content.js
+      const meta      = result.email_meta || {};
+
+      // Fill form fields from real Gmail email data
+      const gmailEmail = emailData || {};
+      document.getElementById('xai-subject').value =
+        gmailEmail.subject   || meta.subject  || '';
+      document.getElementById('xai-sender').value  =
+        gmailEmail.from_email|| meta.sender   || '';
+      document.getElementById('xai-body').value    =
+        gmailEmail.body      || '';
+      document.getElementById('xai-urls').value    =
+        (gmailEmail.urls || []).join(', ');
+
+      // Show "📡 From Gmail" badge
+      document.getElementById('gmail-source-badge').style.display = 'block';
+      document.getElementById('scan-card-title').textContent = '📡 Live Gmail Email — Auto-Analysed';
+      document.getElementById('scan-card-subtitle').textContent =
+        `Scanned on ${new Date(payload.openedAt).toLocaleString()} · Click "⚡ Re-scan" to refresh`;
+      document.getElementById('btn-scan-xai').textContent = '⚡ Re-scan';
+
+      // Immediately render results — no button click needed
+      renderResult(result);
+
+      // Scroll into results
+      setTimeout(() => {
+        document.getElementById('xai-results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
+    }
+    // Always load aggregate chart
+    loadAggregateXAI();
+    initShared();
+  })();
+
+  // ── Auto Extract ────────────────────────────────────────────────────────────
+  document.getElementById('btn-auto-extract').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-auto-extract');
+    btn.textContent = '⏳ Loading…'; btn.disabled = true;
+    try {
+      // Try fetching latest scan from backend history
+      const res = await fetch(`${API}/history?limit=1`, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
+        const data = await res.json();
+        const records = data.records || [];
+        if (records.length > 0) {
+          const r = records[0];
+          const meta = r.email_meta || {};
+          document.getElementById('xai-subject').value = meta.subject || '';
+          document.getElementById('xai-sender').value = meta.sender || '';
+          document.getElementById('xai-body').value = meta.body || '';
+          document.getElementById('xai-urls').value = (meta.urls || []).join(', ');
+          document.getElementById('gmail-source-badge').style.display = 'block';
+          document.getElementById('scan-card-subtitle').textContent = 'Auto-filled from latest scan at ' + new Date(r.timestamp).toLocaleString();
+          // Also render the result if available
+          if (r.safety_score != null) {
+            renderResult(r);
+            renderXAIDetails(r);
+          }
+          btn.textContent = '📡 Auto Extract'; btn.disabled = false;
+          return;
+        }
+      }
+      alert('No extracted email found. Scan an email from the extension first.');
+    } catch {
+      alert('No extracted email found. Scan an email from the extension first.');
+    }
+    btn.textContent = '📡 Auto Extract'; btn.disabled = false;
+  });
+
+  // ── Render XAI Detail Sections ──────────────────────────────────────────────
+  function renderXAIDetails(r) {
+    const d = document.getElementById('xai-details');
+    if (!d) return;
+    d.style.display = 'block';
+    const meta = r.email_meta || {};
+    const struct = r.structural_indicators || {};
+    const trust = r.trust_analysis || {};
+    const dns = r.dns_summary || {};
+    document.getElementById('xd-subject').textContent = meta.subject || 'Not available';
+    document.getElementById('xd-sender').textContent = meta.sender || 'Not available';
+    document.getElementById('xd-replyto').textContent = meta.reply_to || 'Not available';
+    document.getElementById('xd-timestamp').textContent = r.timestamp ? new Date(r.timestamp).toLocaleString() : 'Not available';
+    document.getElementById('xd-urlcount').textContent = meta.url_count != null ? meta.url_count : (meta.urls||[]).length;
+    document.getElementById('xd-bodylen').textContent = (meta.body||'').length + ' chars';
+    document.getElementById('xd-subjlen').textContent = (meta.subject||'').length + ' chars';
+    document.getElementById('xd-urgency').textContent = struct.urgency_score != null ? struct.urgency_score : 'Not available';
+    document.getElementById('xd-sensitive').textContent = struct.sensitive_keyword_count != null ? struct.sensitive_keyword_count : 'Not available';
+    document.getElementById('xd-mismatch').textContent = struct.domain_mismatch ? '⚠️ Yes' : '✔ No';
+    // URL list
+    const urlList = meta.urls || [];
+    document.getElementById('xd-url-list').innerHTML = urlList.length > 0
+      ? urlList.map(u => '<div style="padding:3px 0;word-break:break-all;font-family:JetBrains Mono,monospace;">' + (u.length > 60 ? u.slice(0,60)+'…' : u) + '</div>').join('')
+      : 'No URLs found';
+    // Model explanation
+    document.getElementById('xd-prediction').textContent = r.phishing ? '⚠️ PHISHING' : '✔ LEGITIMATE';
+    document.getElementById('xd-confidence').textContent = r.confidence != null ? (r.confidence * 100).toFixed(1) + '%' : 'Not available';
+    document.getElementById('xd-safety').textContent = r.safety_score != null ? r.safety_score + '/100' : 'Not available';
+    document.getElementById('xd-risk').textContent = r.risk_level || 'Not available';
+    document.getElementById('xd-dns').textContent = dns.total_checked != null ? `${dns.resolved||0} resolved, ${dns.unresolved||0} unresolved of ${dns.total_checked}` : 'Not available';
+    document.getElementById('xd-trust').textContent = trust.trust_score != null ? (trust.trust_score * 100).toFixed(0) + '%' + (trust.is_trusted_sender ? ' (Trusted)' : '') : 'Not available';
+    document.getElementById('xd-vtstatus').textContent = r.external_scan_status || 'Not available';
+  }
+
+  // Hook into manual scan to also show details
+  const _origRender = renderResult;
+  // Override not needed — renderResult is called, then we check for details
+  const _scanBtn = document.getElementById('btn-scan-xai');
+  const _origClick = _scanBtn.onclick;
+  _scanBtn.addEventListener('click', () => {
+    // After scan completes, wait a moment and show details from last result
+    setTimeout(async () => {
+      try {
+        const res = await fetch(`${API}/history?limit=1`, { signal: AbortSignal.timeout(2000) });
+        if (res.ok) { const d = await res.json(); if (d.records?.length) renderXAIDetails(d.records[0]); }
+      } catch {}
+    }, 1500);
+  });
+  </script>
+</body>
+</html>
