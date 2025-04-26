@@ -1,0 +1,16 @@
+subject,from_email,body,urls,label
+Verify Your Account,noreply@bankscam.ru,"Dear Customer, please verify your account by clicking the link below. Your account has been flagged for security review. Click here to confirm your identity.",https://bit.ly/verify123,1
+Meeting Tomorrow at 3PM,john.smith@company.com,"Hi Team, Let's meet tomorrow at 3 PM to discuss the Q1 project status. Conference room B is reserved. See you then!",https://company.com/calendar,0
+URGENT: Confirm Identity,noreply@paypal-verify.com,"Your PayPal account security alert. We detected unusual activity. Please verify your identity immediately by clicking below to avoid account suspension.",https://paypa1-verify.com/confirm,1
+Project Update,manager@company.com,"Team, here's the latest status update on our current projects. Performance is on track. Please review the attached document.",https://company.com/docs/project,0
+Prize Winner Notification,admin@lottery-fake.com,"Congratulations! You have won 1 million dollars in our annual lottery. Claim your prize by clicking the link and entering your details now!",https://lottery-win-claim.ru/prize,1
+Password Reset Required,security@twitter-check.com,"Your Twitter account password needs to be reset immediately for security purposes. Click here to reset your password now.",https://twitterverify-secure.com/reset,1
+Team Lunch This Friday,events@company.com,"Hi everyone, we're having a team lunch this Friday at 12 PM at the downtown restaurant. Please RSVP in the team chat.",https://company.com/events,0
+Your Shipment Arrived,delivery@amazon-confirm.uk,"Your Amazon order has arrived! Track your package using the link below. If you didn't place this order, verify your account immediately.",https://amazn-track-delivery.com/order,1
+Monthly Expense Report,finance@company.com,"Please submit your monthly expense reports by end of business Friday. Use the expense portal link to upload your receipts.",https://company.com/expense-portal,0
+Limited Time Offer,sales@store-deals.com,"Flash sale! 90% off everything today only. Hurry up before stocks run out. Click the link to shop now!",https://store-deals-sale.net/flash,1
+Vacation Request Approval,hr@company.com,"Your vacation request has been approved. Please confirm the dates and let HR know if you need anything else for your time off.",https://company.com/hr-portal,0
+Confirm Bank Account,noreply@citibank-verify.ru,"Citibank Security: unusual login detected. Confirm your bank account details now to protect your funds from unauthorized access.",https://citibank-secure-verify.com/login,1
+New Project Assignment,projects@company.com,"You have been assigned to a new project starting next month. Details and team information are in the attached file.",https://company.com/projects,0
+Click Here Quick Money,marketing@quickcash-now.ru,"Easy Money! Get $5000 instantly. No credit check needed. Apply now to get approved within 1 hour!",https://quickcash-instant-loan.ru/apply,1
+Office Relocation Notice,admin@company.com,"Our office is relocating next month. The new address and parking information are in the attached document. Questions? Ask your manager.",https://company.com/relocation,0
