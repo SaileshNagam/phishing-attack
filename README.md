@@ -120,7 +120,7 @@ phishing-email-detector/
 ### 1. Clone and Setup
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/SaileshNagam/phishing-attack.git
 cd phishing-email-detector
 
 # Create virtual environment

@@ -11,7 +11,7 @@ setup(
     description="Hybrid Semantic-Structural Email Phishing Detection System",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/username/phishing-email-detector",
+    url="https://github.com/SaileshNagam/phishing-attack",
     packages=find_packages(),
     python_requires=">=3.10",
     classifiers=[
